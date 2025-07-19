@@ -70,8 +70,11 @@ def main():
     library_dir = sys.argv[1]
     declarations = collect_declarations(library_dir)
 
-    output = "external_library_decl.txt"
-    with open(output, "w", encoding="utf-8") as f:
+    output_dir = "../output"
+    output_file = "external_dependencies.txt"
+    output_path = os.path.join(output_dir, output_file)
+    os.makedirs(output_dir, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(f"--{library_dir}\n\n")
         for kind, name in declarations:
             f.write(f"{kind}: {name}\n")

@@ -5,7 +5,6 @@ import sys
 EXCLUDE_KEYWORDS = [".build", "Pods", "vendor", "thirdparty", "external"]
 
 def run_command(cmd):
-    print(f"실행: {' '.join(cmd)}\n")
     result = subprocess.run(cmd, capture_output=True, text=True)
     print(result.stdout)
     print(result.stderr)
@@ -17,7 +16,7 @@ def find_swift_files(directory):
         lower_root = root.lower()
         if any(keyword in lower_root for keyword in EXCLUDE_KEYWORDS):
             continue
-        
+
         for file in files:
             if file.endswith(".swift"):
                 swift_files.append(os.path.join(root, file))
