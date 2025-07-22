@@ -39,13 +39,28 @@ struct FunctionInfoExtractor {
             }
         }
         
+        var parameters: [String] = []
+        if let parameterClause = node.signature.input as? ParameterClauseSyntax {
+            for param in parameterClause.parameterList {
+                let typeText = param.type.description.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                parameters.append(typeText)
+            }
+        }
+        
+        var returnType: String?
+        if let returnClause = node.signature.output {
+            returnType = returnClause.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
         return IdentifierInfo(
             A_name: name,
             B_kind: kind,
             C_accessLevel: accessLevel,
             D_attributes: attributes,
             F_location: location,
-            G_members: memberList
+            G_members: memberList,
+            I_parameters: parameters,
+            J_returnType: returnType
         )
     }
 }

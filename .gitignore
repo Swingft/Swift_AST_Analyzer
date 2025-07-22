@@ -7,3 +7,6 @@
 # file
 *.json
 *.txt
+
+# directory
+temp/

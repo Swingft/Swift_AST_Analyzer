@@ -6,12 +6,14 @@
 //
 
 struct IdentifierInfo: Codable {
-    var A_name: String                        //선언 이름
+    var A_name: String
     var B_kind: String                        
-    var C_accessLevel: String                 //접근제어자
-    var D_attributes: [String]                //속성
-    var E_adoptedClassProtocols: [String]?    //프로토콜 채택
-    var F_location: String                    //위치
+    var C_accessLevel: String
+    var D_attributes: [String]
+    var E_adoptedClassProtocols: [String]?
+    var F_location: String
     var G_members: [IdentifierInfo]?
-    var H_initialValue: String?               //초기값
+    var H_initialValue: String?
+    var I_parameters: [String]?
+    var J_returnType: String?
 }
