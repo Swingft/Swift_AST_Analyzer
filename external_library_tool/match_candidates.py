@@ -19,13 +19,13 @@ def match_candidates_protocol_ex(candidates):
         name = candidates.get("A_name")
         signature = f"protocol: {name}"
         for keyword in EXTERNAL_KEYWORDS:
-            if signature in keyword:
+            if signature == keyword:
                 return True
         adopted = candidates.get("E_adoptedClassProtocols", [])
         for name in adopted:
             signature = f"protocol: {name}"
             for keyword in EXTERNAL_KEYWORDS:
-                if signature in keyword:
+                if signature == keyword:
                     return True
         return False
     
@@ -44,7 +44,8 @@ def match_candidates_protocol(candidates):
         for name in adopted:
             signature = f"protocol: {name}"
             for keyword in EXTERNAL_KEYWORDS:
-                if signature in keyword:
+                if signature == keyword:
+                    print(f"{signature} - {keyword}")
                     return True
         return False
 
