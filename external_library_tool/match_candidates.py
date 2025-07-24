@@ -5,60 +5,85 @@ MATCHED_LIST = []
 NOT_MATCHED_LIST = []
 EXTERNAL_KEYWORDS = []
     
-def match_candidates_protocol_ex(candidates):
+# extension -> protocol, class, struct, enum
+# extension x: y {} -> y == protocol -> 요구사항 메서드/변수 확인
+def match_candidates_extension(candidates):
     if isinstance(candidates, list):
         for item in candidates:
             if item.get("B_kind") == "extension":
-                is_true = match_candidates_protocol_ex(item)
-                if is_true:
-                    MATCHED_LIST.append(item)
-                else:
+                is_true = match_candidates_extension(item)
+                if is_true and item not in MATCHED_LIST:
+                    item_copy = copy.deepcopy(item)
+                    if "G_members" in item_copy:
+                        del item_copy["G_members"]
+                    MATCHED_LIST.append(item_copy)
+                elif not is_true and item not in NOT_MATCHED_LIST:
                     NOT_MATCHED_LIST.append(item)
 
     elif isinstance(candidates, dict):
         name = candidates.get("A_name")
-        signature = f"protocol: {name}"
         for keyword in EXTERNAL_KEYWORDS:
-            if signature == keyword:
-                return True
+            for kind in ["protocol", "class", "struct", "enum"]:
+                signature = f"{kind}: {name}"
+                if signature == keyword:
+                    if kind == "protocol":
+                        match_protocol_requirements(candidates)
+                    return True
         adopted = candidates.get("E_adoptedClassProtocols", [])
         for name in adopted:
             signature = f"protocol: {name}"
             for keyword in EXTERNAL_KEYWORDS:
                 if signature == keyword:
-                    return True
+                    match_protocol_requirements(candidates)
+                    break
         return False
     
+def match_protocol_requirements(candidate):
+    members = candidate.get("G_members", [])
+    for member in members:
+        name = member.get("A_name")
+        kind = member.get("B_kind")
+        signature = f"{kind}: {name}"
+        for keyword in EXTERNAL_KEYWORDS:
+            if signature in keyword:
+                if member not in MATCHED_LIST:
+                    MATCHED_LIST.append(member)
 
+# protocol 채택 -> 요구사항 메서드/변수 확인
 def match_candidates_protocol(candidates):
     if isinstance(candidates, list):
         for item in candidates:
             if item.get("E_adoptedClassProtocols", []):
                 is_true = match_candidates_protocol(item)
-                if is_true:
-                    MATCHED_LIST.append(item)
-                else:
+                if is_true and item not in MATCHED_LIST:
+                    item_copy = copy.deepcopy(item)
+                    if "G_members" in item_copy:
+                        del item_copy["G_members"]
+                    MATCHED_LIST.append(item_copy)
+                elif not is_true and item not in NOT_MATCHED_LIST:
                     NOT_MATCHED_LIST.append(item)
+    
     elif isinstance(candidates, dict):
         adopted = candidates.get("E_adoptedClassProtocols", [])
         for name in adopted:
             signature = f"protocol: {name}"
             for keyword in EXTERNAL_KEYWORDS:
                 if signature == keyword:
-                    print(f"{signature} - {keyword}")
+                    match_protocol_requirements(candidates)
                     return True
         return False
 
-
+# class override
 def match_candidates_override(candidates):
     if isinstance(candidates, list):
         for item in candidates:
             if "override" in item.get("D_attributes", []):
                 is_true = match_candidates_override(item)
-                if is_true:
+                if is_true and item not in MATCHED_LIST:
                     MATCHED_LIST.append(item)
-                else:
+                elif not is_true and item not in NOT_MATCHED_LIST:
                     NOT_MATCHED_LIST.append(item)
+    
     elif isinstance(candidates, dict):
         name = candidates.get("A_name")
         kind = candidates.get("B_kind")
@@ -91,10 +116,10 @@ def match_and_save(candidate_path, external_list_path):
 
     match_candidates_override(candidates)
     match_candidates_protocol(candidates)
-    match_candidates_protocol_ex(candidates)
-    with open(matched_output_path, "w", encoding="utf-8") as f:
+    match_candidates_extension(candidates)
+    with open(matched_output_path, "a", encoding="utf-8") as f:
         json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
-    with open(unmatched_output_path, "w", encoding="utf-8") as f:
+    with open(unmatched_output_path, "a", encoding="utf-8") as f:
         json.dump(NOT_MATCHED_LIST, f, indent=2, ensure_ascii=False)
 
 

@@ -11,7 +11,7 @@ def run_command(cmd):
 
 
 def find_swift_files(directory):
-    swift_files = []
+    swift_files = set()
     for root, _, files in os.walk(directory):
         lower_root = root.lower()
         if any(keyword in lower_root for keyword in EXCLUDE_KEYWORDS):
@@ -19,16 +19,13 @@ def find_swift_files(directory):
 
         for file in files:
             if file.endswith(".swift"):
-                swift_files.append(os.path.join(root, file))
-    return swift_files
+                swift_files.add(os.path.join(root, file))
 
-
-def run_swift_code(directory, target_name):
-    swift_files = find_swift_files(directory)
-
-    for swift_file in swift_files:
-        cmd = ["swift", "run", target_name, swift_file]
-        run_command(cmd)
+    output_path ="output/swift_file_list.txt"
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        for swift_file in swift_files:
+            f.write(f"{swift_file}\n")
 
 
 def main():
@@ -39,10 +36,15 @@ def main():
     target_name = "SyntaxAST"
     code_project_dir = sys.argv[1]
     # "/Users/seunghye/Desktop/SampleProject/Test"
+    swift_list_dir = "/Users/seunghye/Desktop/AST-Code/output/swift_file_list.txt"
 
+    find_swift_files(code_project_dir)
     os.chdir(target_project_dir)
+
+    output_dir = "/Users/seunghye/Desktop/AST-Code/output/source_json/"
+    os.makedirs(os.path.dirname(output_dir), exist_ok=True)
     run_command(["swift", "build"])
-    run_swift_code(code_project_dir, target_name)
+    run_command(["swift", "run", target_name, swift_list_dir])
 
 
 if __name__ == "__main__":

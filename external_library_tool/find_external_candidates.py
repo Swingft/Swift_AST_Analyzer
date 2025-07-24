@@ -7,19 +7,16 @@ FIND_ADOPTED = []
 
 def find_external_element(data):
     if isinstance(data, dict):
+        # protocol 채택
         if data.get("E_adoptedClassProtocols"):
-            is_override = False
-            for member in data.get("G_members", []):
-                if member.get("B_kind") == "function" and "override" in member.get("D_attributes", []):
-                    is_override = True
-                    break
-            if not is_override:
-                data_copy = copy.deepcopy(data)
-                FIND_ADOPTED.append(data_copy)
-        elif data.get("B_kind") == "extension":
-            data_copy = copy.deepcopy(data)
-            FIND_ADOPTED.append(data_copy)
+            FIND_ADOPTED.append(data)
+        
+        # class, protocol, struct, enum 확장
+        # protocol인 경우, 요구사항 구현 선택 가능
+        if data.get("B_kind") == "extension":
+            FIND_ADOPTED.append(data)
 
+        # class override
         if "override" in data.get("D_attributes", []):
             data_copy = copy.deepcopy(data)
             if "G_members" in data_copy:
@@ -46,7 +43,7 @@ def find_and_save_function(json_dir_path, output_path):
     final_list = []
     final_list.extend(FIND_ADOPTED)
     final_list.extend(FIND_OVERRIDE)
-    with open(output_path, "w", encoding="utf-8") as f:
+    with open(output_path, "a", encoding="utf-8") as f:
         json.dump(final_list, f, indent=2, ensure_ascii=False)
 
 
