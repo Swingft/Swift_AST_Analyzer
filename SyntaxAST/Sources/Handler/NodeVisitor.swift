@@ -58,4 +58,10 @@ class Visitor: SyntaxVisitor {
         
         return .skipChildren
     }
+    
+    override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
+        let info = EnumInfoExtractor.extract(from: node, locationHandler: location)
+        store.append(info)
+        return .skipChildren
+    }
 }
