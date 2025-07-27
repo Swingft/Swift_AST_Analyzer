@@ -13,19 +13,20 @@ do {
     for sourcePath in sourcePaths {
         do {
             let extractor = try Extractor(sourcePath: sourcePath)
-            extractor.performExtraction()
-            
-            let result = extractor.store.all()
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let jsonData = try encoder.encode(result)
+            let isUIKit: Bool = extractor.performExtraction()
+            if !isUIKit {
+                let result = extractor.store.all()
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let jsonData = try encoder.encode(result)
 
-            let sourceURL = URL(fileURLWithPath: sourcePath)
-            let fileName = sourceURL.deletingPathExtension().lastPathComponent
-            let outputURL = URL(fileURLWithPath: outputDir)
-                    .appendingPathComponent(fileName)
-                    .appendingPathExtension("json")
-            try jsonData.write(to: outputURL)
+                let sourceURL = URL(fileURLWithPath: sourcePath)
+                let fileName = sourceURL.deletingPathExtension().lastPathComponent
+                let outputURL = URL(fileURLWithPath: outputDir)
+                        .appendingPathComponent(fileName)
+                        .appendingPathExtension("json")
+                try jsonData.write(to: outputURL)
+            }
         } catch {
             print("Error: \(error)")
         }

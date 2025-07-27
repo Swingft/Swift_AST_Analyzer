@@ -29,8 +29,16 @@ class Extractor {
         self.location = LocationHandler(file: sourcePath, source: sourceText)
     }
     
-    func performExtraction() {
+    func performExtraction() -> Bool {
+        let importInfo = ImportExtractor()
+        importInfo.walk(syntaxTree)
+        let isUIKit: Bool = importInfo.writeImports()
+        if isUIKit {
+            return true
+        }
+        
         let visitor = Visitor(store: store, location: location)
         visitor.walk(syntaxTree)
+        return false
     }
 }
