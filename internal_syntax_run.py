@@ -39,10 +39,11 @@ def main():
     swift_list_dir = "/Users/seunghye/Desktop/AST-Code/output/swift_file_list.txt"
 
     find_swift_files(code_project_dir)
-    os.chdir(target_project_dir)
 
-    output_dir = "/Users/seunghye/Desktop/AST-Code/output/source_json/"
-    os.makedirs(os.path.dirname(output_dir), exist_ok=True)
+    output_dir = "./output/source_json/"
+    os.makedirs(output_dir, exist_ok=True)
+
+    os.chdir(target_project_dir)
     run_command(["swift", "build"])
     run_command(["swift", "run", target_name, swift_list_dir])
 

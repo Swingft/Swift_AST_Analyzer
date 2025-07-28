@@ -2,8 +2,6 @@ import json
 import copy
 
 MATCHED_LIST = []
-NOT_MATCHED_LIST = []
-EXTERNAL_KEYWORDS = []
     
 # extension -> protocol, class, struct, enum
 # extension x: y {} -> y == protocol -> 요구사항 메서드/변수 확인
@@ -16,14 +14,12 @@ def match_candidates_extension(candidates):
                     item_copy = copy.deepcopy(item)
                     if "G_members" in item_copy:
                         del item_copy["G_members"]
-                    MATCHED_LIST.append(item_copy)
-                elif not is_true and item not in NOT_MATCHED_LIST:
-                    NOT_MATCHED_LIST.append(item)
+                    MATCHED_LIST.append(item_copy)       
 
     elif isinstance(candidates, dict):
         name = candidates.get("A_name")
         for keyword in EXTERNAL_KEYWORDS:
-            for kind in ["protocol", "class", "struct", "enum"]:
+            for kind in ["protocol", "class", "struct", "enum", "extension"]:
                 signature = f"{kind}: {name}"
                 if signature == keyword:
                     if kind == "protocol":
@@ -46,7 +42,14 @@ def match_protocol_requirements(candidate):
         signature = f"{kind}: {name}"
         for keyword in EXTERNAL_KEYWORDS:
             if signature in keyword:
-                if member not in MATCHED_LIST:
+                is_matched = True
+                if kind == "function":
+                    parameters = member.get("I_parameters")
+                    for param in parameters:
+                        if param not in keyword:
+                            is_matched = False
+                            break
+                if is_matched and member not in MATCHED_LIST:
                     MATCHED_LIST.append(member)
 
 # protocol 채택 -> 요구사항 메서드/변수 확인
@@ -54,14 +57,12 @@ def match_candidates_protocol(candidates):
     if isinstance(candidates, list):
         for item in candidates:
             if item.get("E_adoptedClassProtocols", []):
-                is_true = match_candidates_protocol(item)
-                if is_true and item not in MATCHED_LIST:
-                    item_copy = copy.deepcopy(item)
-                    if "G_members" in item_copy:
-                        del item_copy["G_members"]
-                    MATCHED_LIST.append(item_copy)
-                elif not is_true and item not in NOT_MATCHED_LIST:
-                    NOT_MATCHED_LIST.append(item)
+                match_candidates_protocol(item)
+                # if is_true and item not in MATCHED_LIST:
+                #     item_copy = copy.deepcopy(item)
+                #     if "G_members" in item_copy:
+                #         del item_copy["G_members"]
+                #     MATCHED_LIST.append(item_copy)
     
     elif isinstance(candidates, dict):
         adopted = candidates.get("E_adoptedClassProtocols", [])
@@ -81,8 +82,6 @@ def match_candidates_override(candidates):
                 is_true = match_candidates_override(item)
                 if is_true and item not in MATCHED_LIST:
                     MATCHED_LIST.append(item)
-                elif not is_true and item not in NOT_MATCHED_LIST:
-                    NOT_MATCHED_LIST.append(item)
     
     elif isinstance(candidates, dict):
         name = candidates.get("A_name")
@@ -117,11 +116,24 @@ def match_and_save(candidate_path, external_list_path):
     match_candidates_override(candidates)
     match_candidates_protocol(candidates)
     match_candidates_extension(candidates)
-    with open(matched_output_path, "a", encoding="utf-8") as f:
+    with open(matched_output_path, "w", encoding="utf-8") as f:
         json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
-    with open(unmatched_output_path, "a", encoding="utf-8") as f:
-        json.dump(NOT_MATCHED_LIST, f, indent=2, ensure_ascii=False)
 
+    unmatched_candidates = []
+    matched_signature = set()
+    for matched in MATCHED_LIST:
+        name = matched.get("A_name")
+        kind = matched.get("B_kind")
+        location = matched.get("F_location")
+        matched_signature.add((name, kind, location))
+    for item in candidates:
+        name = item.get("A_name")
+        kind = item.get("B_kind")
+        location = item.get("F_location")
+        if (name, kind, location) not in matched_signature:
+            unmatched_candidates.append(item)
+    with open(unmatched_output_path, "w", encoding="utf-8") as f:
+        json.dump(unmatched_candidates, f, indent=2, ensure_ascii=False)
 
 def main():
     candidate_path = "../output/external_candidates.json"

@@ -82,6 +82,10 @@ struct EnumInfoExtractor {
                 let info = FunctionInfoExtractor.extract(from: funcDecl, locationHandler: locationHandler)
                 memberList.append(info)
             }
+            else if let enumDecl = decl.as(EnumDeclSyntax.self) {
+                let info = EnumInfoExtractor.extract(from: enumDecl, locationHandler: locationHandler)
+                memberList.append(info)
+            }
         }
         
         return IdentifierInfo(

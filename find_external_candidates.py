@@ -2,26 +2,27 @@ import os
 import json
 import copy
 
-FIND_OVERRIDE = []
-FIND_ADOPTED = []
+FIND_CANDIDATE = []
 
 def find_external_element(data):
     if isinstance(data, dict):
         # protocol 채택
         if data.get("E_adoptedClassProtocols"):
-            FIND_ADOPTED.append(data)
+            FIND_CANDIDATE.append(data)
         
         # class, protocol, struct, enum 확장
         # protocol인 경우, 요구사항 구현 선택 가능
         if data.get("B_kind") == "extension":
-            FIND_ADOPTED.append(data)
+            if data not in FIND_CANDIDATE:
+                FIND_CANDIDATE.append(data)
 
         # class override
         if "override" in data.get("D_attributes", []):
             data_copy = copy.deepcopy(data)
             if "G_members" in data_copy:
                 del data_copy["G_members"]
-            FIND_OVERRIDE.append(data_copy)
+            if data_copy not in FIND_CANDIDATE:
+                FIND_CANDIDATE.append(data_copy)
         
         for member in data.get("G_members", []):
             find_external_element(member)
@@ -40,16 +41,13 @@ def find_and_save_function(json_dir_path, output_path):
                     data = json.load(f)
                     find_external_element(data)
 
-    final_list = []
-    final_list.extend(FIND_ADOPTED)
-    final_list.extend(FIND_OVERRIDE)
     with open(output_path, "a", encoding="utf-8") as f:
-        json.dump(final_list, f, indent=2, ensure_ascii=False)
+        json.dump(FIND_CANDIDATE, f, indent=2, ensure_ascii=False)
 
 
 def main():
-    json_dir_path = "../output/source_json"
-    output_path = "../output/external_candidates.json"
+    json_dir_path = "./output/source_json"
+    output_path = "./output/external_candidates.json"
     find_and_save_function(json_dir_path, output_path)
     
 
