@@ -29,16 +29,20 @@ class Extractor {
         self.location = LocationHandler(file: sourcePath, source: sourceText)
     }
     
-    func performExtraction() -> Bool {
+    func performExtraction() -> (Bool, [TypealiasInfo]) {
+        let typealiasInfo = TypealiasVisitor()
+        typealiasInfo.walk(syntaxTree)
+        
         let importInfo = ImportExtractor()
         importInfo.walk(syntaxTree)
-        let isUIKit: Bool = importInfo.writeImports()
-        if isUIKit {
-            return true
-        }
-        
+        let isUI: Bool = importInfo.writeImports()
+    
         let visitor = Visitor(store: store, location: location)
         visitor.walk(syntaxTree)
-        return false
+        
+        if isUI {
+            return (true, typealiasInfo.result)
+        }
+        return (false, typealiasInfo.result)
     }
 }

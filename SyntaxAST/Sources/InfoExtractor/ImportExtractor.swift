@@ -25,7 +25,7 @@ class ImportExtractor: SyntaxVisitor {
     func writeImports() -> Bool {
         let outputFile = URL(fileURLWithPath: "../output/").appendingPathComponent("import_list.txt")
         let content = imports.joined(separator: "\n") + "\n"
-        if content.contains("UIKit") {
+        if content.contains("UIKit") || content.contains("SwiftUI") {
             return true
         }
 
