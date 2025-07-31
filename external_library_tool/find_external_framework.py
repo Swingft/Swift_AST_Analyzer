@@ -36,8 +36,8 @@ DECLARATION_PATTERNS = {
 }
 
 def find_declarations(si_paths, directory):
-    declarations = set()
     for path in si_paths:
+        declarations = set()
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
         for key, pattern in DECLARATION_PATTERNS.items():
@@ -45,12 +45,12 @@ def find_declarations(si_paths, directory):
             for name in find_list:
                 declarations.add(f"{key}: {name}")
     
-    output_path = "../output/external_dependencies.txt"
-    with open(output_path, "a", encoding="utf-8") as f:
-        f.write(f"\n\n--{directory}\n\n")
-        for dec in declarations:
-            f.write(f"{dec}\n")
-    return declarations
+        output_path = "../output/external_dependencies.txt"
+        with open(output_path, "a", encoding="utf-8") as f:
+            f.write(f"\n\n--{path}\n\n")
+            for dec in declarations:
+                f.write(f"{dec}\n")
+        return declarations
 
 
 def main():

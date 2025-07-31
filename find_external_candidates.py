@@ -2,53 +2,39 @@ import os
 import json
 import copy
 
-FIND_CANDIDATE = []
+CANDIDATE_NODE = []
 
-def find_external_element(data):
-    if isinstance(data, dict):
-        # protocol 채택
-        if data.get("E_adoptedClassProtocols"):
-            FIND_CANDIDATE.append(data)
-        
-        # class, protocol, struct, enum 확장
-        # protocol인 경우, 요구사항 구현 선택 가능
-        if data.get("B_kind") == "extension":
-            if data not in FIND_CANDIDATE:
-                FIND_CANDIDATE.append(data)
+def find_candidate_node():
+    input_path = "./output/inheritance_node.json"
+    with open(input_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
 
-        # class override
-        if "override" in data.get("D_attributes", []):
-            data_copy = copy.deepcopy(data)
-            if "G_members" in data_copy:
-                del data_copy["G_members"]
-            if data_copy not in FIND_CANDIDATE:
-                FIND_CANDIDATE.append(data_copy)
-        
-        for member in data.get("G_members", []):
-            find_external_element(member)
-
-    elif isinstance(data, list):
-        for item in data:
-            find_external_element(item)
-
-
-def find_and_save_function(json_dir_path, output_path):
-    for path, _, files in os.walk(json_dir_path):
-        for file in files:
-            if file.endswith(".json"):
-                file_path = os.path.join(path, file)
-                with open(file_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    find_external_element(data)
-
-    with open(output_path, "a", encoding="utf-8") as f:
-        json.dump(FIND_CANDIDATE, f, indent=2, ensure_ascii=False)
-
+    for item in data:
+        node = item.get("node")
+        if "B_kind" not in node:
+            extension = item.get("extension")
+            children = item.get("children")
+            for ext in extension:
+                if ext not in CANDIDATE_NODE:
+                    CANDIDATE_NODE.append(ext)
+            for child in children:
+                if child not in CANDIDATE_NODE:
+                    CANDIDATE_NODE.append(child)
+    
+    input_path = "./output/no_inheritance_node.json"
+    with open(input_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    for item in data:
+        if "B_kind" == "extension":
+            if item not in CANDIDATE_NODE:
+                CANDIDATE_NODE.append(item)
 
 def main():
-    json_dir_path = "./output/source_json"
     output_path = "./output/external_candidates.json"
-    find_and_save_function(json_dir_path, output_path)
+    
+    find_candidate_node()
+    with open(output_path, "a", encoding="utf-8") as f:
+        json.dump(CANDIDATE_NODE, f, indent=2, ensure_ascii=False)
     
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import subprocess
 import os
 import json
+from collections import defaultdict
 
 def run_command(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -14,6 +15,8 @@ def read_import_list():
         for line in f:
             if line.strip():
                 import_list.add(line.strip())
+    import_list.add("Swift")
+    import_list.add("Foundation")
     with open(path, "w", encoding="utf-8") as f:
         for i in import_list:
             f.write(f"{i}\n")
@@ -55,26 +58,28 @@ def dump_to_json(digester_path, sdk_path, import_list):
 def signature_to_json():
     file_dir = "../output/sdk-json/"
     output_path = "../output/sdk-signature.json"
-    signature_list = []
+    signature_list = defaultdict(list)
 
-    def collect_signature(item):
+    def collect_signature(item, module_name):
         if isinstance(item, list):
             for member in item:
-                collect_signature(member)
-        elif isinstance(item, dict):    
-            signature_list.append(extract_signature(item))
+                collect_signature(member, module_name)
+        elif isinstance(item, dict): 
+            signature = extract_signature(item)
+            signature_list[module_name].append(signature)
             for value in item.values():
                 if isinstance(value, list):
-                    collect_signature(value)
+                    collect_signature(value, module_name)
 
     for file in os.listdir(file_dir):
         input_file = os.path.join(file_dir, file)
+        module_name = os.path.splitext(file)[0]
         with open(input_file, "r", encoding="utf-8") as f:
             sdk_data = json.load(f)
         root = sdk_data.get("ABIRoot", {})
         items = root.get("children", [])
         for item in items:
-            collect_signature(item)
+            collect_signature(item, module_name)
                 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(signature_list, f, indent=2, ensure_ascii=False)

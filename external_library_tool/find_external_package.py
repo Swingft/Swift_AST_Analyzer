@@ -2,7 +2,7 @@ import os
 import sys
 import re
 
-# path
+# 프로젝트 이름 탐색
 def get_project_name(project_root):
     names = []
     for _, dirname, _ in os.walk(project_root):
@@ -12,42 +12,39 @@ def get_project_name(project_root):
                 names.append(name)
     return names
 
-def find_external_library_path(project_root):
-    paths = set()
+# 외부라이브러리 탐색
+def find_external_library(project_root):
+    dir_paths = set()
 
-    build_checkouts = os.path.join(project_root, ".build", "checkouts")
-    if os.path.isdir(build_checkouts):
-        paths.add(build_checkouts)
-    
-    pods = os.path.join(project_root, "Pods")
-    if os.path.isdir(pods):
-        paths.add(pods)
-
+    # 프로젝트 파일 내부 경로
     for dirpath, _, _ in os.walk(project_root):
-        build_checkouts = os.path.join(dirpath, ".build", "checkouts")
-        if os.path.isdir(build_checkouts):
-            paths.add(build_checkouts)
-        
-        pods = os.path.join(dirpath, "Pods")
-        if os.path.isdir(pods):
-            paths.add(pods)
+        for dir in [".build/checkouts", "Pods"]:
+            candidate = os.path.join(dirpath, dir)
+            if os.path.isdir(candidate):
+                dir_paths.add(candidate)
     
-    return paths
-
-def find_external_library_path_in_derived(proejct_names):
-    paths = []
+    # 프로젝트 파일 외부 경로
     derived_data = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/")
-    
+    project_names = get_project_name(project_root)
     if os.path.isdir(derived_data):
         for item in os.listdir(derived_data):
-            for name in proejct_names:
+            for name in project_names:
                 if item.startswith(name + "-"):
                     derived_path = os.path.join(derived_data, item, "SourcePackages", "checkouts")
-                    paths.append(derived_path)
-    return paths
+                    dir_paths.add(derived_path)
+   
+    # .swift 파일 수집 및 저장
+    swift_flles = []
+    for dir_path in dir_paths:
+        for path, _, files in os.walk(dir_path):
+            for file in files:
+                if file.endswith(".swift"):
+                    file_path = os.path.join(path, file)
+                    swift_flles.append(file_path)
+    return swift_flles
 
 
-# declaration
+# 선언부 추출
 EXCLUDE_KEYWORDS = ["test", "example", "sample", "docs"]
 DECLARATION_PATTERNS = {
     "protocol": re.compile(r"^\s*(?:@[\w\._\(\)]+[\s]+)*(?:\w+\s+)*protocol\s+([\w\.]+)", re.MULTILINE),
@@ -73,23 +70,14 @@ def find_declarations(file):
         print(f"Error {file}: {e}")
     return declarations
 
-def collect_declarations(directory):
-    swift_files = []
-    collections = set()
-    for path, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith(".swift"):
-                file_path = os.path.join(path, file)
-                swift_files.append(file_path)
-    
+def collect_declarations(swift_files):
     for file in swift_files:
-        collections.update(find_declarations(file))
-    
-    output_path = "../output/external_dependencies.txt"
-    with open(output_path, "a", encoding="utf-8") as f:
-        f.write(f"--{directory}\n\n")
-        for kind, name in collections:
-            f.write(f"{kind}: {name}\n")
+        collections = find_declarations(file)
+        output_path = "../output/external_dependencies.txt"
+        with open(output_path, "a", encoding="utf-8") as f:
+            f.write(f"\n\n--{file}\n\n")
+            for kind, name in collections:
+                f.write(f"{kind}: {name}\n")
 
 
 def main():
@@ -97,13 +85,8 @@ def main():
         exit(1)
     
     project_dir = sys.argv[1]
-    path = find_external_library_path(project_dir)
-    derived_path = find_external_library_path_in_derived(get_project_name(project_dir))
-    path.update(derived_path)
-
-    if path:
-        for p in path:
-            collect_declarations(p)
+    swift_files = find_external_library(project_dir)
+    collect_declarations(swift_files)
 
 
 if __name__ == "__main__":
