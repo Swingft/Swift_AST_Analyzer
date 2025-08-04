@@ -58,11 +58,11 @@ def check_inheritance(nodes):
             else:
                 alias_adopted.append(parent)
         node["E_adoptedClassProtocols"] = alias_adopted
-
+        
         if kind == "extension":
             extension_nodes.append(node)
             continue
-        
+            
         if alias_adopted:
             AST_NODE[name] = node
             for parent in alias_adopted:
@@ -87,14 +87,37 @@ def check_inheritance(nodes):
                 "children": []
             }
         INHERITANCE[name]["extension"].append(node)
-
+       
     # 부모 노드 연결
-    for parent in INHERITANCE.keys():
+    for parent in list(INHERITANCE.keys()):
         node = AST_NODE.get(parent)        
         if node:
             INHERITANCE[parent]["parent_node"] = node
             if parent in NO_INHERITANCE:   
                  del NO_INHERITANCE[parent]
+            link_adopted_info_from_extension(parent)
+            
+def link_adopted_info_from_extension(parent_node):
+    root_node = INHERITANCE[parent_node]
+    node = root_node.get("parent_node")
+    extensions = root_node.get("extension", [])
+    for extension in extensions:
+        adopted = extension.get("E_adoptedClassProtocols", [])
+        for ad in adopted:
+            if node is None:
+                continue
+
+            if ad not in node.get("E_adoptedClassProtocols", []):
+                ex_adopted = node.get("E_adoptedClassProtocols", [])
+                ex_adopted.append(ad)
+                node["E_adoptedClassProtocols"] = ex_adopted
+                if ad not in INHERITANCE:
+                    INHERITANCE[ad] = {
+                        "parent_node": None,
+                        "extension": [],
+                        "children": []
+                    }
+                INHERITANCE[ad]["children"].append(node)
 
 # ui <-> not ui
 def check_inheritance_ui(ui_nodes):
@@ -171,7 +194,6 @@ def make_inheritance_tree():
             root_tree = make_root_tree(parent)
             root.append(root_tree)
     return root
-
 
 def main():
     output_path = "../output/inheritance_node.json"

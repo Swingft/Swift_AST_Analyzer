@@ -1,136 +1,137 @@
 import json
+import re
+import os
+from collections import defaultdict
 
 MATCHED_LIST = []
-EXTERNAL_KEYWORDS = {}
-    
-# 프로토콜 요구사항 확인
-def match_protocol_requirements(candidate, keywords):
-    members = candidate.get("G_members", [])
+EXTERNAL_NAME = defaultdict(list)
+EXTERNAL_NAME_TO_FILE = defaultdict(list)
+
+# 외부 요소 MATCHED_LIST에 추가
+def in_matched_list(node):
+    if node not in MATCHED_LIST:
+        MATCHED_LIST.append(node)
+
+def match_member(node, ex_node):
+    members = node.get("G_members", [])
+    ex_members = ex_node.get("G_members", [])
     for member in members:
-        name = member.get("A_name")
-        kind = member.get("B_kind")
-        signature = f"{kind}: {name}"
-        for keyword in keywords:
-            if signature in keyword:
-                is_matched = True
-                if kind == "function":
-                    parameters = member.get("I_parameters", [])
-                    for param in parameters:
-                        if param not in keyword:
-                            is_matched = False
-                            break
-                if is_matched and member not in MATCHED_LIST:
-                    MATCHED_LIST.append(member)     
+        member_name = member.get("A_name")
+        member_kind = member.get("B_kind")
+        for ex in ex_members:
+            ex_name = ex.get("A_name")
+            ex_kind = ex.get("B_kind")
+            if member_name == ex_name and member_kind == ex_kind:
+                if ex_node.get("B_kind") == "protocol":
+                    in_matched_list(member)
+                elif ex_node.get("B_kind") == "class":
+                    attributes = member.get("D_attributes", [])
+                    if "override" in attributes:
+                        in_matched_list(member)
 
-# override 확인
-def check_override(node, keywords):
-    node_member = node.get("G_members", [])
-    for member in node_member:
-        if "override" in member.get("D_attributes", []):
-            name = member.get("A_name")
-            kind = member.get("B_kind")
-            parameters = member.get("I_parameters")
-            signature = f"{kind}: {name}("
+# 외부 요소와 노드 비교
+def compare_node(in_node, ex_node):
+    if isinstance(ex_node, list):
+        for n in ex_node:
+            compare_node(in_node, n)
+
+    elif isinstance(ex_node, dict):
+        node = in_node.get("node")
+        if node:
+            extensions = in_node.get("extension", [])
+            children = in_node.get("children", [])
+        else:
+            node = in_node
+            extensions = []
+            children = []
             
-            for keyword in keywords:
-                if signature in keyword:
-                    is_matched = True
-                    for param in parameters:
-                        if param not in keyword:
-                            is_matched = False
-                            break
-                    if is_matched and member not in MATCHED_LIST:
-                        MATCHED_LIST.append(member)
+        # extension x {}
+        if (node.get("A_name") == ex_node.get("A_name")) and (node.get("B_kind") == "extension"):
+            in_matched_list(node)
+            if ex_node.get("B_kind") == "protocol":
+                match_member(node, ex_node)
+                for extension in extensions:
+                    match_member(extension, ex_node)
+                for child in children:
+                    match_member(child, ex_node)
+                
+        # 클래스 상속, 프로토콜 채택, extension x: y {}
+        adopted = node.get("E_adoptedClassProtocols", [])
+        for ad in adopted:
+            if ex_node.get("A_name") == ad:
+                match_member(node, ex_node)
+                for extension in extensions:
+                    match_member(extension, ex_node)
+                for child in children:
+                    match_member(child, ex_node)
 
-def match_candidates(data):
+# 외부 요소와 이름이 같은지 확인
+def match_ast_name(data, external_ast_dir):
     if isinstance(data, list):
         for item in data:
-            match_candidates(item)
-        return
-    
-    node = data.get("node")
-    if node:
-        extensions = data.get("extension", [])
-        children = data.get("children", [])
-        adopted = node.get("E_adoptedClassProtocols", [])
-    else:
-        node = data
-        extensions = []
-        children = []
-        adopted = node.get("E_adoptedClassProtocols", [])
-
-    for name in adopted:
-        # 프로토콜 채택
-        signature = f"protocol: {name}"
-        for _, keywords in EXTERNAL_KEYWORDS.items():
-            for keyword in keywords:
-                if signature in keyword:
-                    match_protocol_requirements(node, keywords)
-                    for extension in extensions:
-                        match_protocol_requirements(extension, keywords)
-                    for child in children:
-                        match_protocol_requirements(child, keywords)
+            match_ast_name(item, external_ast_dir)
+    elif isinstance(data, dict):
+        node = data.get("node")
+        if not node:
+            node = data
         
-        # 클래스 상속 - override
-        signature = f"class: {name}"
-        for _, keywords in EXTERNAL_KEYWORDS.items():
-            for keyword in keywords:
-                if signature in keyword:
-                    check_override(node, keywords)
-                    for extension in extensions:
-                        check_override(extension, keywords)
-                    for child in children:
-                        check_override(child, keywords)
-                    
-    # extension
-    if node.get("B_kind") == "extension":
+        candidate_files = []
+        # extension -> 이름이 같은지
         name = node.get("A_name")
-        for kind in ["protocol", "class", "struct", "enum", "extension"]:
-            signature = f"{kind}: {name}"
-            for _, keywords in EXTERNAL_KEYWORDS.items():
-                for keyword in keywords:
-                    if signature in keyword:
-                        if node not in MATCHED_LIST:
-                            MATCHED_LIST.append(node)
-                        if kind == "protocol":
-                            match_protocol_requirements(node, keywords)
-                            for extension in extensions:
-                                match_protocol_requirements(extension, keywords)
-                            for child in children:
-                                match_protocol_requirements(child, keywords)
-                        else:
-                            if extensions:
-                                for extension in extensions:
-                                    if extension not in MATCHED_LIST:
-                                        MATCHED_LIST.append(extension)
-                    
+        if name in EXTERNAL_NAME and node.get("B_kind") == "extension":
+            candidate_files.extend(EXTERNAL_NAME_TO_FILE[name])
+         
+        # 나머지 -> 상속 정보
+        adopted = node.get("E_adoptedClassProtocols", [])
+        for ad in adopted:
+            if ad in EXTERNAL_NAME_TO_FILE.keys():
+                candidate_files.extend(EXTERNAL_NAME_TO_FILE[ad])
+        for file in candidate_files:
+            file_path = os.path.join(external_ast_dir, file)
+            with open(file_path, "r", encoding="utf-8") as f:
+                ex_data = json.load(f)
+                compare_node(data, ex_data)
 
-def match_and_save(candidate_path, external_list_path):
-    matched_output_path = "../output/external_list.json"
+# 외부라이브러리 AST에서 노드 이름 추출
+def extract_ast_name(ast, file):
+    def ast_name(node):
+        if isinstance(node, list):
+            for item in node:
+                ast_name(item)
+        elif isinstance(node, dict):
+            EXTERNAL_NAME[file].append(node.get("A_name"))   
+    ast_name(ast)
+
+def match_and_save(candidate_path, external_ast_path):
     with open(candidate_path, "r", encoding="utf-8") as f:
         candidates = json.load(f)
     
-    current_file = None
-    with open(external_list_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("--/"):
-                current_file = line[2:]
-                EXTERNAL_KEYWORDS[current_file] = []
-            else:
-                if current_file is not None:
-                    EXTERNAL_KEYWORDS[current_file].append(line)
-       
-    match_candidates(candidates)
+    for file in os.listdir(external_ast_path):
+        file_path = os.path.join(external_ast_path, file)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                extract_ast_name(data, file)
+        except Exception as e:
+            print(e)
+    for file_name, names in EXTERNAL_NAME.items():
+        for name in names:
+            if file_name not in EXTERNAL_NAME_TO_FILE[name]:
+                EXTERNAL_NAME_TO_FILE[name].append(file_name)
+
+    match_ast_name(candidates, external_ast_path)
+
+    matched_output_path = "../output/external_list.json"
     with open(matched_output_path, "w", encoding="utf-8") as f:
         json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
+    
 
 
 def main():
     candidate_path = "../output/external_candidates.json"
-    external_list_path = "../output/external_dependencies.txt"
+    external_ast_path = "../output/external_to_ast/"
 
-    match_and_save(candidate_path, external_list_path)
+    match_and_save(candidate_path, external_ast_path)
 
 
 if __name__ == "__main__":

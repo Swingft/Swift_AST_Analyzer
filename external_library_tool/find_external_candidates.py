@@ -5,7 +5,7 @@ import copy
 CANDIDATE_NODE = []
 
 def find_candidate_node():
-    input_path = "./output/inheritance_node.json"
+    input_path = "../output/inheritance_node.json"
     with open(input_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
@@ -21,7 +21,7 @@ def find_candidate_node():
                 if child not in CANDIDATE_NODE:
                     CANDIDATE_NODE.append(child)
     
-    input_path = "./output/no_inheritance_node.json"
+    input_path = "../output/no_inheritance_node.json"
     with open(input_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     for item in data:
@@ -30,7 +30,7 @@ def find_candidate_node():
                 CANDIDATE_NODE.append(item)
 
 def main():
-    output_path = "./output/external_candidates.json"
+    output_path = "../output/external_candidates.json"
     
     find_candidate_node()
     with open(output_path, "a", encoding="utf-8") as f:
