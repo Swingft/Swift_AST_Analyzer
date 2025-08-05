@@ -1,7 +1,6 @@
 import subprocess
 import os
 import json
-from collections import defaultdict
 
 def run_command(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -54,52 +53,62 @@ def dump_to_json(digester_path, sdk_path, import_list):
         if name == "NO_MODULE":
             os.remove(output_path)
 
-# 핵심 필드 추출 -> json 저장
-def signature_to_json():
-    file_dir = "../output/sdk-json/"
-    output_path = "../output/sdk-signature.json"
-    signature_list = defaultdict(list)
+# 멤버 타입 추출
+def get_type_name(node):
+    for child in node.get("children", []):
+        if child.get("kind") == "TypeNominal":
+            return child.get("printedName")
+    return None
 
-    def collect_signature(item, module_name):
-        if isinstance(item, list):
-            for member in item:
-                collect_signature(member, module_name)
-        elif isinstance(item, dict): 
-            signature = extract_signature(item)
-            signature_list[module_name].append(signature)
-            for value in item.values():
-                if isinstance(value, list):
-                    collect_signature(value, module_name)
-
-    for file in os.listdir(file_dir):
-        input_file = os.path.join(file_dir, file)
-        module_name = os.path.splitext(file)[0]
-        with open(input_file, "r", encoding="utf-8") as f:
-            sdk_data = json.load(f)
-        root = sdk_data.get("ABIRoot", {})
-        items = root.get("children", [])
-        for item in items:
-            collect_signature(item, module_name)
-                
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(signature_list, f, indent=2, ensure_ascii=False)
-
-def extract_signature(item):
-    name = item.get("name")
-    kind = item.get("kind")
-    usr = item.get("usr")
-    param = []
-
-    children = item.get("children", [])
+# 멤버 정보 추출
+def get_members(children):
+    members = {}
     for child in children:
-        param.append(child.get("name"))
+        kind = child.get("kind")
+        decl_kind = child.get("declKind", kind)
+        name = child.get("name")
+        
+        if decl_kind not in {"Var", "Function", "Constructor", "Subscript", 
+                             "Enum", "EnumElement", "TypeAlias", "AssociatedType"}:
+            continue
 
-    return {
-        "name": name,
-        "kind": kind,
-        "usr": usr,
-        "param": param
-    }
+        member_info = {
+            "kind": decl_kind,
+            "type": get_type_name(child),
+            "usr": child.get("usr", None)
+        }
+
+        members[name] = member_info
+    return members
+
+# sdk api의 타입 및 멤버 정보 추출
+def sdk_dump_parser(path):
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    sdk_info = {}
+
+    abi_root = data.get("ABIRoot", {})
+    children = abi_root.get("children", [])
+
+    for child in children:
+        kind = child.get("kind")
+        decl_kind = child.get("declKind", kind)
+        
+        if kind != "TypeDecl":
+            continue
+
+        name = child.get("name")
+        info = {
+            "kind": decl_kind,
+            "module": child.get("moduleName"),
+            "usr": child.get("usr"),
+            "members": get_members(child.get("children", []))
+        }
+        sdk_info[name] = info
+    
+    return sdk_info
+
 
 def main():
     digester_path, sdk_path = find_path()
@@ -108,7 +117,16 @@ def main():
     output_dir = "../output/sdk-json/"
     os.makedirs(output_dir, exist_ok=True)
     dump_to_json(digester_path, sdk_path, import_list)
-    signature_to_json()
+    
+    for fileName in os.listdir(output_dir):
+        file_path = os.path.join(output_dir, fileName)
+        sdk_info = sdk_dump_parser(file_path)
+
+        if not sdk_info:
+            os.remove(file_path)
+        else:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(sdk_info, f, indent=2, ensure_ascii=False)
 
 if __name__ == "__main__":
     main()

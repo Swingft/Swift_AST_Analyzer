@@ -1,163 +1,120 @@
 import json
-from collections import defaultdict
+import os
 
 MATCHED_LIST = []
-SDK_SIGNATURE = defaultdict(list)
+SDK_SIGNATURE = {}
 
-def match_protocol_requirements(candidate, modules):
-    members = candidate.get("G_members", [])
+# SDK 요소 MATCHED_LIST에 추가
+def in_matched_list(node):
+    if node not in MATCHED_LIST:
+        MATCHED_LIST.append(node)
+
+# "Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"의 멤버변수 제외
+def add_var_member(node):
+    members = node.get("G_members", [])
     for member in members:
-        key = (
-            member["A_name"],
-            "var" if member["B_kind"] == "variable" else member["B_kind"]
-        )
-        if key not in SDK_SIGNATURE:
-            continue
+        if member.get("B_kind") == "variable":
+            in_matched_list(member)
 
-        for item in SDK_SIGNATURE[key]:
-            if item["module"] not in modules:
-                continue
-            
-            is_matched = True
-            if member.get("B_kind") == "function":
-                parameters = member.get("I_parameters")
-                params = item.get("param", [])
-                for p in parameters:
-                    if p not in params:
-                        is_matched = False
-                        break
-            
-            if is_matched and member not in MATCHED_LIST:
-                MATCHED_LIST.append(member)
-
-# override 확인
-def check_override(item, modules):
-    members = item.get("G_members", [])
+def match_member(node, sdk_node):
+    members = node.get("G_members", [])
+    sdk_members = sdk_node.get("members", {})
     for member in members:
-        if "override" in member.get("D_attributes", []):
-            key = (member.get("A_name"), "function")
-            if key not in SDK_SIGNATURE:
-                continue
-            
-            for sdk in SDK_SIGNATURE[key]:
-                if sdk["module"] not in modules:
-                    continue
-                is_matched = True
-                parameters = member.get("I_parameters")
-                params = sdk.get("param", [])
-                for p in parameters:
-                    if p not in params:
-                        is_matched = False
-                        break
-                
-                if is_matched and member not in MATCHED_LIST:
-                    MATCHED_LIST.append(member)
+        name = member.get("A_name")
+        if name in sdk_members:
+            sdk_member = sdk_members[name]
+            sdk_kind = sdk_member.get("kind", "").lower()
+            if sdk_kind == "var":
+                sdk_kind = "variable"
+            elif sdk_kind == "enumelement":
+                sdk_kind = "case"
+            if member.get("B_kind") == sdk_kind:  
+                in_matched_list(member)
 
-def codable_variable(item):
-    members = item.get("G_members", [])
-    for member in members:
-        if member.get("B_kind") == "variable" and member not in MATCHED_LIST:
-            MATCHED_LIST.append(member) 
-
-def enum_raw_value(item):
-    members = item.get("G_members", [])
-    for member in members:
-        if member.get("B_kind") == "case" and member not in MATCHED_LIST:
-            MATCHED_LIST.append(member)
-        elif member.get("B_kind") == "enum":
-            enum_raw_value(member)
-
-def match_candidates(data):
-    if isinstance(data, list):
-        for item in data:
-            match_candidates(item)
-        return
-
-    node = data.get("node")
+# 자식 노드가 자식 노드를 가지는 경우
+def repeat_match_member(in_node, sdk_sig):
+    node = in_node.get("node")
     if node:
-        extensions = data.get("extension", [])
-        children = data.get("children", [])
+        extensions = in_node.get("extension", [])
+        children = in_node.get("children", [])
     else:
-        node = data
+        node = in_node
         extensions = []
         children = []
-    adopted = node.get("E_adoptedClassProtocols", [])
 
-    for name in adopted:
-        # rawValue enum
-        if name in ["String", "Int", "UInt", "Double", "Float", "Character"]:
-            enum_raw_value(node)
-
-        # 프로토콜 채택
-        for kind in ["conformance", "typeNominal"]:
-            key = (name, kind)
-            if key in SDK_SIGNATURE or name in ["Codable"]:
-                # Codable : 직접 채택, 채택한 프로토콜을 채택
-                if name in ["Codable", "Decodable", "Encodable"]:
-                    codable_variable(node)
-                    if node.get("B_kind") == "protocol":
-                        for child in children:
-                            codable_variable(child)
-                else:
-                    modules = {item["module"] for item in SDK_SIGNATURE[key]}
-                    match_protocol_requirements(node, modules)
-                    for extension in extensions:
-                        match_protocol_requirements(extension, modules)
-                    for child in children:
-                        match_protocol_requirements(child, modules)
-            
-        # 클래스 상속 - override
-        key = (node.get("A_name"), "class")
-        if key in SDK_SIGNATURE:
-            modules = {item["module"] for item in SDK_SIGNATURE[key]}
-            check_override(node, modules)
-            for extension in extensions:
-                check_override(extension, modules)
-            for child in children:
-                check_override(child, modules)
+    match_member(node, sdk_sig)
+    for extension in extensions:
+        repeat_match_member(extension, sdk_sig)
+    for child in children:
+        repeat_match_member(child, sdk_sig)
+    
+# SDK 요소 식별
+def match_sdk_name(data):
+    if isinstance(data, list):
+        for item in data:
+            match_sdk_name(item)
+    elif isinstance(data, dict):
+        node = data.get("node")
+        if node:
+            extensions = data.get("extension", [])
+            children = data.get("children", [])
+        else:
+            node = data
+            extensions = []
+            children = []
         
-    # extension
-    if node.get("B_kind") == "extension":
         name = node.get("A_name")
-        for kind in ["protocol", "class", "struct", "enum", "extension", "conformance"]:
-            key = (name, kind)
-            if key in SDK_SIGNATURE:
-                if node not in MATCHED_LIST:
-                    MATCHED_LIST.append(node)
-                if kind == "protocol" or kind == "conformance":
-                    modules = {item["module"] for item in SDK_SIGNATURE[key]}
-                    match_protocol_requirements(node, modules)
-                    for extension in extensions:
-                        match_protocol_requirements(extension, modules)
-                    for child in children:
-                        match_protocol_requirements(child, modules)
-                else:
-                    if extensions:
-                        for extension in extensions:
-                            if extension not in MATCHED_LIST:
-                                MATCHED_LIST.append(extension)
+        # extention x {}
+        if name in SDK_SIGNATURE and node.get("B_kind") == "extension":
+            in_matched_list(node)
 
+            # 멤버변수 난독화 제외
+            if name in ["Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
+                add_var_member(node)
+                for extension in extensions:
+                    add_var_member(extension)
+                for child in children:
+                    add_var_member(child)
+
+            if SDK_SIGNATURE[name].get("kind") == "Protocol":
+                repeat_match_member(data, SDK_SIGNATURE[name])
+        
+        adopted = node.get("E_adoptedClassProtocols", [])
+        for ad in adopted:
+            if ad in SDK_SIGNATURE:
+                repeat_match_member(data, SDK_SIGNATURE[ad])
+                if ad in ["Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
+                    add_var_member(node)
+                    for extension in extensions:
+                        add_var_member(extension)
+                    for child in children:
+                        add_var_member(child)
+
+# SDK 노드 정보 추출 및 결과 저장
 def match_and_save(candidate_path, sdk_file_path):
     matched_output_path = "../output/standard_list.json"
     with open(candidate_path, "r", encoding="utf-8") as f:
         candidates = json.load(f)
-    with open(sdk_file_path, "r", encoding="utf-8") as f:
-        sdk = json.load(f)
-    
-    for module, items in sdk.items():
-        for item in items:
-            key = (item["name"], item["kind"].lower())
-            item["module"] = module
-            SDK_SIGNATURE[key].append(item)
-    
-    match_candidates(candidates)
+
+    for file in os.listdir(sdk_file_path):
+        file_path = os.path.join(sdk_file_path, file)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            for name, info in data.items():
+                SDK_SIGNATURE[name] = info
+        except Exception as e:
+            print(e)
+
+    match_sdk_name(candidates)
     with open(matched_output_path, "w", encoding="utf-8") as f:
         json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
-    
+
 
 def main():
     candidate_path = "../output/external_candidates.json"
-    sdk_file_path = "../output/sdk-signature.json"
+    sdk_file_path = "../output/sdk-json/"
+
     match_and_save(candidate_path, sdk_file_path)
 
 if __name__ == "__main__":

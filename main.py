@@ -23,6 +23,8 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     output_dir = "./output/external_to_ast/"
     os.makedirs(output_dir, exist_ok=True)
+    output_dir = "./output/sdk-json/"
+    os.makedirs(output_dir, exist_ok=True)
 
     # 소스코드 파일 위치 수집
     cmd = ["python3", "find_internal_files.py", code_project_dir]
@@ -61,6 +63,27 @@ def main():
         run_command(cmd)
         cmd = ["python3", "match_candidates.py"]
         run_command(cmd)
+
+    # 표준 SDK 정보 추출 & 표준 SDK 요소 식별
+    path = os.path.join(original_dir, "output/import_list.txt")
+    if os.path.exists(path):
+        standard_dir = os.path.join(original_dir, "standard_sdk_tool/")
+        os.chdir(standard_dir)
+        cmd = ["python3", "find_standard_sdk.py"]
+        run_command(cmd)
+        cmd = ["python3", "match_candidates.py"]
+        run_command(cmd)
+
+    # 사용 완료한 파일 삭제
+    file_path = os.path.join(original_dir, "output/import_list.txt")
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    file_path = os.path.join(original_dir, "output/external_file_list.txt")
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    file_path = os.path.join(original_dir, "output/external_candidates.json")
+    if os.path.exists(file_path):
+        os.remove(file_path)
 
 
 if __name__ == "__main__":
