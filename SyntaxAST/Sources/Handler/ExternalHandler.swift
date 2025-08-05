@@ -19,11 +19,11 @@ class ExternalHandler {
         let fileList = try String(contentsOfFile: sourceListPath)
         let sourcePaths = fileList.split(separator: "\n").map { String($0) }
         
+        let lock = NSLock()
         var count: Int = 0
         
-        for sourcePath in sourcePaths {
+        DispatchQueue.concurrentPerform(iterations: sourcePaths.count) { index in let sourcePath = sourcePaths[index]
             do {
-                count += 1
                 let extractor = try Extractor(sourcePath: sourcePath)
                 let (isUIKit, typealiasResult) = extractor.performExtraction()
                 
@@ -32,10 +32,13 @@ class ExternalHandler {
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
                 let jsonData = try encoder.encode(result)
                 
+                lock.lock()
+                count += 1
                 let sourceURL = URL(fileURLWithPath: sourcePath)
                 let fileName = sourceURL.deletingPathExtension().lastPathComponent
-                
                 let fileNameWithCount = "\(count)_\(fileName)"
+                lock.unlock()
+                
                 var outputURL = URL(fileURLWithPath: outputDir)
                     .appendingPathComponent(fileNameWithCount)
                     .appendingPathExtension("json")

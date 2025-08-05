@@ -29,6 +29,24 @@ def match_member(node, ex_node):
                     if "override" in attributes:
                         in_matched_list(member)
 
+# 자식 노드가 자식 노드를 가지는 경우
+def repeat_match_member(in_node, ex_node):
+    node = in_node.get("node")
+    if node:
+        extensions = in_node.get("extension", [])
+        children = in_node.get("children", [])
+    else:
+        node = in_node
+        extensions = []
+        children = []
+    
+    match_member(node, ex_node)
+
+    for extension in extensions:
+        repeat_match_member(extension, ex_node)
+    for child in children:
+        repeat_match_member(child, ex_node)
+
 # 외부 요소와 노드 비교
 def compare_node(in_node, ex_node):
     if isinstance(ex_node, list):
@@ -37,33 +55,20 @@ def compare_node(in_node, ex_node):
 
     elif isinstance(ex_node, dict):
         node = in_node.get("node")
-        if node:
-            extensions = in_node.get("extension", [])
-            children = in_node.get("children", [])
-        else:
+        if not node:
             node = in_node
-            extensions = []
-            children = []
             
         # extension x {}
         if (node.get("A_name") == ex_node.get("A_name")) and (node.get("B_kind") == "extension"):
             in_matched_list(node)
             if ex_node.get("B_kind") == "protocol":
-                match_member(node, ex_node)
-                for extension in extensions:
-                    match_member(extension, ex_node)
-                for child in children:
-                    match_member(child, ex_node)
-                
+                repeat_match_member(in_node, ex_node)
+
         # 클래스 상속, 프로토콜 채택, extension x: y {}
         adopted = node.get("E_adoptedClassProtocols", [])
         for ad in adopted:
             if ex_node.get("A_name") == ad:
-                match_member(node, ex_node)
-                for extension in extensions:
-                    match_member(extension, ex_node)
-                for child in children:
-                    match_member(child, ex_node)
+                repeat_match_member(in_node, ex_node)
 
 # 외부 요소와 이름이 같은지 확인
 def match_ast_name(data, external_ast_dir):
@@ -125,7 +130,6 @@ def match_and_save(candidate_path, external_ast_path):
     with open(matched_output_path, "w", encoding="utf-8") as f:
         json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
     
-
 
 def main():
     candidate_path = "../output/external_candidates.json"

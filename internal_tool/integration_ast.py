@@ -87,8 +87,12 @@ def check_inheritance(nodes):
                 "children": []
             }
         INHERITANCE[name]["extension"].append(node)
-       
+    
     # 부모 노드 연결
+    link_parent_node()
+       
+# 부모 노드 연결
+def link_parent_node():
     for parent in list(INHERITANCE.keys()):
         node = AST_NODE.get(parent)        
         if node:
@@ -96,7 +100,8 @@ def check_inheritance(nodes):
             if parent in NO_INHERITANCE:   
                  del NO_INHERITANCE[parent]
             link_adopted_info_from_extension(parent)
-            
+
+# 확장에서 추가한 프로토콜 연결  
 def link_adopted_info_from_extension(parent_node):
     root_node = INHERITANCE[parent_node]
     node = root_node.get("parent_node")
@@ -118,6 +123,7 @@ def link_adopted_info_from_extension(parent_node):
                         "children": []
                     }
                 INHERITANCE[ad]["children"].append(node)
+                link_parent_node()
 
 # ui <-> not ui
 def check_inheritance_ui(ui_nodes):
