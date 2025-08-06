@@ -1,0 +1,25 @@
+import json
+
+MERGED_NODE = []
+LOCATIONS = set()
+
+def merged_file_node():
+    paths = ["./output/external_list.json", "./output/internal_exception_list.json", "./output/standard_list.json"]
+    for path in paths:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            for node in data:
+                location = node.get("F_location")
+                if location not in LOCATIONS:
+                    MERGED_NODE.append(node)
+                    LOCATIONS.add(location)
+
+def main():
+    merged_file_node()
+
+    output_path = "./output/exception_list.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(MERGED_NODE, f, indent=2, ensure_ascii=False)
+
+if __name__ == "__main__":
+    main()

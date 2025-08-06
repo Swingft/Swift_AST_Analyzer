@@ -74,6 +74,11 @@ def main():
         cmd = ["python3", "match_candidates.py"]
         run_command(cmd)
 
+    # 제외 대상 리스트 병합
+    os.chdir(original_dir)
+    cmd = ["python3", "merge_exception_list.py"]
+    run_command(cmd)
+
     # 사용 완료한 파일 삭제
     file_path = os.path.join(original_dir, "output/import_list.txt")
     if os.path.exists(file_path):
@@ -82,6 +87,15 @@ def main():
     if os.path.exists(file_path):
         os.remove(file_path)
     file_path = os.path.join(original_dir, "output/external_candidates.json")
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    file_path = os.path.join(original_dir, "output/external_list.json")
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    file_path = os.path.join(original_dir, "output/internal_exception_list.json")
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    file_path = os.path.join(original_dir, "output/standard_list.json")
     if os.path.exists(file_path):
         os.remove(file_path)
 

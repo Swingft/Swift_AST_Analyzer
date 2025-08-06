@@ -72,7 +72,7 @@ def check_is_enum(node):
             if member.get("B_kind") == "case":
                 in_matched_list(member)
 
-# @objc dynamic, @objcMembers, @Model, @NSManaged 속성을 가질 경우, 제외
+# @objc dynamic, @objcMembers, @Model, @NSManaged, @_silgen_name, @_cdecl 속성을 가질 경우, 제외
 def check_attribute(node):
     def check_member():
         members = node.get("G_members", [])
@@ -82,9 +82,9 @@ def check_attribute(node):
     attributes = node.get("D_attributes", [])
     members = node.get("G_members", [])
 
-    if "objc" in attributes or "dynamic" in attributes or "NSManaged" in attributes:
+    if "objc" in attributes or "dynamic" in attributes or "NSManaged" in attributes or "_silgen_name" in attributes or "_cdecl" in attributes:
         in_matched_list(node)
-    
+
     if "objcMembers" in attributes:
         in_matched_list(node)
         for member in members:
@@ -95,7 +95,7 @@ def check_attribute(node):
         for member in members:
             if member.get("B_kind") == "variable":
                 in_matched_list(member)
-    
+
     check_member()
 
 def find_exception_target(node):
