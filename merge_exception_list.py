@@ -1,4 +1,5 @@
 import json
+import copy
 
 MERGED_NODE = []
 LOCATIONS = set()
@@ -11,7 +12,10 @@ def merged_file_node():
             for node in data:
                 location = node.get("F_location")
                 if location not in LOCATIONS:
-                    MERGED_NODE.append(node)
+                    node_copy = copy.deepcopy(node)
+                    if "G_members" in node_copy:
+                        del node_copy["G_members"]
+                    MERGED_NODE.append(node_copy)
                     LOCATIONS.add(location)
 
 def main():
