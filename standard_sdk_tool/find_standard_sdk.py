@@ -115,7 +115,6 @@ def main():
     import_list = read_import_list()
 
     output_dir = "../output/sdk-json/"
-    os.makedirs(output_dir, exist_ok=True)
     dump_to_json(digester_path, sdk_path, import_list)
     
     for fileName in os.listdir(output_dir):

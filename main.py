@@ -54,22 +54,18 @@ def main():
     os.chdir(external_dir)
     cmd = ["python3", "find_external_candidates.py"]
     run_command(cmd)
-    file_path = os.path.join(original_dir, "output/external_candidates.json")
-    if os.path.exists(file_path):
-        cmd = ["python3", "match_candidates.py"]
-        run_command(cmd)
+    cmd = ["python3", "match_candidates.py"]
+    run_command(cmd)
 
     # 표준 SDK 정보 추출 & 표준 SDK 요소 식별
     path = os.path.join(original_dir, "output/import_list.txt")
     if os.path.exists(path):
-        file_path = os.path.join(original_dir, "output/external_candidates.json")
-        if os.path.exists(file_path):
-            standard_dir = os.path.join(original_dir, "standard_sdk_tool/")
-            os.chdir(standard_dir)
-            cmd = ["python3", "find_standard_sdk.py"]
-            run_command(cmd)
-            cmd = ["python3", "match_candidates.py"]
-            run_command(cmd)
+        standard_dir = os.path.join(original_dir, "standard_sdk_tool/")
+        os.chdir(standard_dir)
+        cmd = ["python3", "find_standard_sdk.py"]
+        run_command(cmd)
+        cmd = ["python3", "match_candidates.py"]
+        run_command(cmd)
 
     # 제외 대상 리스트 병합
     obf_dir = os.path.join(original_dir, "obfuscation_tool/")

@@ -92,23 +92,24 @@ def match_sdk_name(data):
 
 # SDK 노드 정보 추출 및 결과 저장
 def match_and_save(candidate_path, sdk_file_path):
-    matched_output_path = "../output/standard_list.json"
-    with open(candidate_path, "r", encoding="utf-8") as f:
-        candidates = json.load(f)
+    if os.path.exists(candidate_path):
+        with open(candidate_path, "r", encoding="utf-8") as f:
+            candidates = json.load(f)
 
-    for file in os.listdir(sdk_file_path):
-        file_path = os.path.join(sdk_file_path, file)
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            for name, info in data.items():
-                SDK_SIGNATURE[name] = info
-        except Exception as e:
-            print(e)
+        for file in os.listdir(sdk_file_path):
+            file_path = os.path.join(sdk_file_path, file)
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for name, info in data.items():
+                    SDK_SIGNATURE[name] = info
+            except Exception as e:
+                print(e)
 
-    match_sdk_name(candidates)
-    with open(matched_output_path, "w", encoding="utf-8") as f:
-        json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
+        match_sdk_name(candidates)
+        matched_output_path = "../output/standard_list.json"
+        with open(matched_output_path, "w", encoding="utf-8") as f:
+            json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
 
 
 def main():

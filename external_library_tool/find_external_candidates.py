@@ -1,33 +1,34 @@
 import os
 import json
-import copy
 
 CANDIDATE_NODE = []
 
 def find_candidate_node():
     input_path = "../output/inheritance_node.json"
-    with open(input_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    if os.path.exists(input_path):
+        with open(input_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
 
-    for item in data:
-        node = item.get("node")
-        if "B_kind" not in node:
-            extension = item.get("extension")
-            children = item.get("children")
-            for ext in extension:
-                if ext not in CANDIDATE_NODE:
-                    CANDIDATE_NODE.append(ext)
-            for child in children:
-                if child not in CANDIDATE_NODE:
-                    CANDIDATE_NODE.append(child)
+        for item in data:
+            node = item.get("node")
+            if "B_kind" not in node:
+                extension = item.get("extension")
+                children = item.get("children")
+                for ext in extension:
+                    if ext not in CANDIDATE_NODE:
+                        CANDIDATE_NODE.append(ext)
+                for child in children:
+                    if child not in CANDIDATE_NODE:
+                        CANDIDATE_NODE.append(child)
     
     input_path = "../output/no_inheritance_node.json"
-    with open(input_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    for item in data:
-        if "B_kind" == "extension":
-            if item not in CANDIDATE_NODE:
-                CANDIDATE_NODE.append(item)
+    if os.path.exists(input_path):
+        with open(input_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        for item in data:
+            if "B_kind" == "extension":
+                if item not in CANDIDATE_NODE:
+                    CANDIDATE_NODE.append(item)
 
 def main():
     output_path = "../output/external_candidates.json"

@@ -1,5 +1,6 @@
 import json
 import re
+import os
 
 MATCHED_LIST = []
 KEYPASS_LIST = []
@@ -137,12 +138,15 @@ def main():
     output_file = "../output/internal_exception_list.json"
 
     find_keypath_type()
-    with open(input_file_1, "r", encoding="utf-8") as f:
-        nodes = json.load(f)
-    find_node(nodes)
-    with open(input_file_2, "r", encoding="utf-8") as f:
-        nodes = json.load(f)
-    find_node(nodes)
+    if os.path.exists(input_file_1):
+        with open(input_file_1, "r", encoding="utf-8") as f:
+            nodes = json.load(f)
+        find_node(nodes)
+    if os.path.exists(input_file_2):
+        with open(input_file_2, "r", encoding="utf-8") as f:
+            nodes = json.load(f)
+        find_node(nodes)
+        
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
 

@@ -108,27 +108,28 @@ def extract_ast_name(ast, file):
     ast_name(ast)
 
 def match_and_save(candidate_path, external_ast_path):
-    with open(candidate_path, "r", encoding="utf-8") as f:
-        candidates = json.load(f)
-    
-    for file in os.listdir(external_ast_path):
-        file_path = os.path.join(external_ast_path, file)
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                extract_ast_name(data, file)
-        except Exception as e:
-            print(e)
-    for file_name, names in EXTERNAL_NAME.items():
-        for name in names:
-            if file_name not in EXTERNAL_NAME_TO_FILE[name]:
-                EXTERNAL_NAME_TO_FILE[name].append(file_name)
+    if os.path.exists(candidate_path):
+        with open(candidate_path, "r", encoding="utf-8") as f:
+            candidates = json.load(f)
+        
+        for file in os.listdir(external_ast_path):
+            file_path = os.path.join(external_ast_path, file)
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    extract_ast_name(data, file)
+            except Exception as e:
+                print(e)
+        for file_name, names in EXTERNAL_NAME.items():
+            for name in names:
+                if file_name not in EXTERNAL_NAME_TO_FILE[name]:
+                    EXTERNAL_NAME_TO_FILE[name].append(file_name)
 
-    match_ast_name(candidates, external_ast_path)
+        match_ast_name(candidates, external_ast_path)
 
-    matched_output_path = "../output/external_list.json"
-    with open(matched_output_path, "w", encoding="utf-8") as f:
-        json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
+        matched_output_path = "../output/external_list.json"
+        with open(matched_output_path, "w", encoding="utf-8") as f:
+            json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
     
 
 def main():

@@ -1,4 +1,5 @@
 import json
+import os
 
 NODE = []
 EXCEPTION_NODE = []
@@ -78,18 +79,23 @@ def main():
     exception_file = "../output/exception_list.json"
     output_file = "../output/ast_node.json"
 
-    with open(input_file_1, "r", encoding="utf-8") as f:
-        nodes = json.load(f)
-    find_node(nodes)
-    with open(input_file_2, "r", encoding="utf-8") as f:
-        nodes = json.load(f)
-    find_node(nodes)
+    if os.path.exists(input_file_1):
+        with open(input_file_1, "r", encoding="utf-8") as f:
+            nodes = json.load(f)
+        find_node(nodes)
+    
+    if os.path.exists(input_file_2):
+        with open(input_file_2, "r", encoding="utf-8") as f:
+            nodes = json.load(f)
+        find_node(nodes)
 
-    with open(exception_file, "r", encoding="utf-8") as f:
-        exception_nodes = json.load(f)
-    if isinstance(exception_nodes, list):
-        for node in exception_nodes:
-            EXCEPTION_NODE.append(node)
+    if os.path.exists(exception_file):
+        with open(exception_file, "r", encoding="utf-8") as f:
+            exception_nodes = json.load(f)
+        if isinstance(exception_nodes, list):
+            for node in exception_nodes:
+                EXCEPTION_NODE.append(node)
+    
     repeat_match_member(NODE)
 
     with open(output_file, "w", encoding="utf-8") as f:
