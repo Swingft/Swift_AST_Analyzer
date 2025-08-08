@@ -21,7 +21,7 @@ def find_swift_files(directory):
             if file.endswith(".swift"):
                 swift_files.add(os.path.join(root, file))
 
-    output_path ="output/swift_file_list.txt"
+    output_path ="../output/swift_file_list.txt"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         for swift_file in swift_files:
