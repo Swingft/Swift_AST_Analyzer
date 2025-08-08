@@ -20,6 +20,9 @@ def find_candidate_node():
                 for child in children:
                     if child not in CANDIDATE_NODE:
                         CANDIDATE_NODE.append(child)
+            elif node.get("B_kind") == "extension":
+                if item not in CANDIDATE_NODE:
+                    CANDIDATE_NODE.append(item)
     
     input_path = "../output/no_inheritance_node.json"
     if os.path.exists(input_path):

@@ -57,10 +57,14 @@ def compare_node(in_node, ex_node):
         node = in_node.get("node")
         if not node:
             node = in_node
-            
+
+        extensions = in_node.get("extension", [])
+        
         # extension x {}
         if (node.get("A_name") == ex_node.get("A_name")) and (node.get("B_kind") == "extension"):
             in_matched_list(node)
+            for extension in extensions:
+                compare_node(extension, ex_node)
             if ex_node.get("B_kind") == "protocol":
                 repeat_match_member(in_node, ex_node)
 
@@ -83,7 +87,7 @@ def match_ast_name(data, external_ast_dir):
         candidate_files = []
         # extension -> 이름이 같은지
         name = node.get("A_name")
-        if name in EXTERNAL_NAME and node.get("B_kind") == "extension":
+        if name in EXTERNAL_NAME_TO_FILE.keys() and node.get("B_kind") == "extension":
             candidate_files.extend(EXTERNAL_NAME_TO_FILE[name])
          
         # 나머지 -> 상속 정보
@@ -91,6 +95,7 @@ def match_ast_name(data, external_ast_dir):
         for ad in adopted:
             if ad in EXTERNAL_NAME_TO_FILE.keys():
                 candidate_files.extend(EXTERNAL_NAME_TO_FILE[ad])
+
         for file in candidate_files:
             file_path = os.path.join(external_ast_dir, file)
             with open(file_path, "r", encoding="utf-8") as f:
