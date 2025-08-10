@@ -68,13 +68,13 @@ def get_members(children):
         decl_kind = child.get("declKind", kind)
         name = child.get("name")
         
-        if decl_kind not in {"Var", "Function", "Constructor", "Subscript", 
+        if decl_kind not in {"Var", "Func", "Constructor", "Subscript", 
                              "Enum", "EnumElement", "TypeAlias", "AssociatedType"}:
             continue
 
         member_info = {
             "kind": decl_kind,
-            "type": get_type_name(child),
+            "type": child.get("printedName"),
             "usr": child.get("usr", None)
         }
 

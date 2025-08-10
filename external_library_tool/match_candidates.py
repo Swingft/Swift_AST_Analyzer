@@ -73,8 +73,7 @@ def compare_node(in_node, ex_node):
         # extension x {}
         if (node.get("A_name") == ex_node.get("A_name")) and (node.get("B_kind") == "extension"):
             repeat_extension(in_node, node.get("A_name"))
-            if ex_node.get("B_kind") == "protocol":
-                repeat_match_member(in_node, ex_node)
+            repeat_match_member(in_node, ex_node)
 
         # 클래스 상속, 프로토콜 채택, extension x: y {}
         adopted = node.get("E_adoptedClassProtocols", [])

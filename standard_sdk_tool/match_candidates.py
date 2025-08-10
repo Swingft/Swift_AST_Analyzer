@@ -28,6 +28,8 @@ def match_member(node, sdk_node):
                 sdk_kind = "variable"
             elif sdk_kind == "enumelement":
                 sdk_kind = "case"
+            elif sdk_kind == "func":
+                sdk_kind = "function"
             if member.get("B_kind") == sdk_kind:  
                 in_matched_list(member)
 
@@ -78,9 +80,13 @@ def match_sdk_name(data):
         name = node.get("A_name")
         # extention x {}
         if name in SDK_SIGNATURE and node.get("B_kind") == "extension":
+            sdk_list = SDK_SIGNATURE[name]
+            if isinstance(sdk_list, list):
+                for sdk in sdk_list:
+                    repeat_match_member(data, sdk)
+            else:
+                repeat_match_member(data, sdk_list)
             repeat_extension(data, name)
-            if SDK_SIGNATURE[name].get("kind") == "Protocol":
-                repeat_match_member(data, SDK_SIGNATURE[name])
         
         adopted = node.get("E_adoptedClassProtocols", [])
         for ad in adopted:
@@ -88,7 +94,12 @@ def match_sdk_name(data):
                 if node.get("B_kind") == "enum":
                     if ad in ["String", "Int", "UInt", "Double", "Float", "Character", "CaseIterable"]:
                         repeat_extension(data, name)
-                repeat_match_member(data, SDK_SIGNATURE[ad])
+                sdk_list = SDK_SIGNATURE[ad]
+                if isinstance(sdk_list, list):
+                    for sdk in sdk_list:
+                        repeat_match_member(data, sdk)
+                else:
+                    repeat_match_member(data, sdk_list)
                 if ad in ["Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
                     repeat_extension(data, name)
                     add_var_member(node)
@@ -109,7 +120,9 @@ def match_and_save(candidate_path, sdk_file_path):
                 with open(file_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 for name, info in data.items():
-                    SDK_SIGNATURE[name] = info
+                    if name not in SDK_SIGNATURE:
+                        SDK_SIGNATURE[name] = []
+                    SDK_SIGNATURE[name].append(info)
             except Exception as e:
                 print(e)
 
