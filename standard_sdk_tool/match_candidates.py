@@ -47,7 +47,19 @@ def repeat_match_member(in_node, sdk_sig):
         repeat_match_member(extension, sdk_sig)
     for child in children:
         repeat_match_member(child, sdk_sig)
+
+# extension 이름 확인
+def repeat_extension(in_node, name):
+    node = in_node.get("node")
+    if not node:
+        node = in_node
     
+    if node.get("A_name") == name:
+        in_matched_list(node)
+        extensions = in_node.get("extension", [])
+        for extension in extensions:
+            repeat_extension(extension, name)
+
 # SDK 요소 식별
 def match_sdk_name(data):
     if isinstance(data, list):
@@ -66,24 +78,19 @@ def match_sdk_name(data):
         name = node.get("A_name")
         # extention x {}
         if name in SDK_SIGNATURE and node.get("B_kind") == "extension":
-            in_matched_list(node)
-
-            # 멤버변수 난독화 제외
-            if name in ["Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
-                add_var_member(node)
-                for extension in extensions:
-                    add_var_member(extension)
-                for child in children:
-                    add_var_member(child)
-
+            repeat_extension(data, name)
             if SDK_SIGNATURE[name].get("kind") == "Protocol":
                 repeat_match_member(data, SDK_SIGNATURE[name])
         
         adopted = node.get("E_adoptedClassProtocols", [])
         for ad in adopted:
             if ad in SDK_SIGNATURE:
+                if node.get("B_kind") == "enum":
+                    if ad in ["String", "Int", "UInt", "Double", "Float", "Character", "CaseIterable"]:
+                        repeat_extension(data, name)
                 repeat_match_member(data, SDK_SIGNATURE[ad])
                 if ad in ["Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
+                    repeat_extension(data, name)
                     add_var_member(node)
                     for extension in extensions:
                         add_var_member(extension)

@@ -47,6 +47,18 @@ def repeat_match_member(in_node, ex_node):
     for child in children:
         repeat_match_member(child, ex_node)
 
+# extension 이름 확인
+def repeat_extension(in_node, name):
+    node = in_node.get("node")
+    if not node:
+        node = in_node
+    
+    if node.get("A_name") == name:
+        in_matched_list(node)
+        extensions = in_node.get("extension", [])
+        for extension in extensions:
+            repeat_extension(extension, name)
+
 # 외부 요소와 노드 비교
 def compare_node(in_node, ex_node):
     if isinstance(ex_node, list):
@@ -57,14 +69,10 @@ def compare_node(in_node, ex_node):
         node = in_node.get("node")
         if not node:
             node = in_node
-
-        extensions = in_node.get("extension", [])
         
         # extension x {}
         if (node.get("A_name") == ex_node.get("A_name")) and (node.get("B_kind") == "extension"):
-            in_matched_list(node)
-            for extension in extensions:
-                compare_node(extension, ex_node)
+            repeat_extension(in_node, node.get("A_name"))
             if ex_node.get("B_kind") == "protocol":
                 repeat_match_member(in_node, ex_node)
 
