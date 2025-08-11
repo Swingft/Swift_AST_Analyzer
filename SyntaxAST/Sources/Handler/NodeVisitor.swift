@@ -64,4 +64,10 @@ class Visitor: SyntaxVisitor {
         store.append(info)
         return .skipChildren
     }
+    
+    override func visit(_ node: ActorDeclSyntax) -> SyntaxVisitorContinueKind {
+        let info = ActorInfoExtractor.extract(from: node, locationHandler: location)
+        store.append(info)
+        return .skipChildren
+    }
 }

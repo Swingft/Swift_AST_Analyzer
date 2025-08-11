@@ -97,6 +97,15 @@ def check_attribute(node):
             if member.get("B_kind") == "variable":
                 in_matched_list(member)
 
+    if "globalActor" in attributes:
+        in_matched_list(node)
+        for member in members:
+            if member.get("A_name") == "shared" and member.get("B_kind") == "variable":
+                in_matched_list(member)
+    
+    if node.get("A_name") in ["get", "set", "willSet", "didSet"]:
+        in_matched_list(node)
+
     check_member()
 
 def find_exception_target(node):
