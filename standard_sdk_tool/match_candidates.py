@@ -21,6 +21,7 @@ def match_member(node, sdk_node):
     sdk_members = sdk_node.get("members", {})
     for member in members:
         name = member.get("A_name")
+        name = name.split(".")[-1]
         if name in sdk_members:
             sdk_member = sdk_members[name]
             sdk_kind = sdk_member.get("kind", "").lower()
@@ -56,7 +57,9 @@ def repeat_extension(in_node, name):
     if not node:
         node = in_node
     
-    if node.get("A_name") == name:
+    c_name = node.get("A_name")
+    c_name = c_name.split(".")[-1]
+    if c_name == name:
         in_matched_list(node)
         extensions = in_node.get("extension", [])
         for extension in extensions:
@@ -78,6 +81,8 @@ def match_sdk_name(data):
             children = []
         
         name = node.get("A_name")
+        name = name.split(".")[-1]
+       
         # extention x {}
         if name in SDK_SIGNATURE and node.get("B_kind") == "extension":
             sdk_list = SDK_SIGNATURE[name]

@@ -53,7 +53,9 @@ def repeat_extension(in_node, name):
     if not node:
         node = in_node
     
-    if node.get("A_name") == name:
+    c_name = node.get("A_name")
+    c_name = c_name.split(".")[-1]
+    if c_name == name:
         in_matched_list(node)
         extensions = in_node.get("extension", [])
         for extension in extensions:
@@ -70,8 +72,10 @@ def compare_node(in_node, ex_node):
         if not node:
             node = in_node
         
+        name = node.get("A_name")
+        name = name.split(".")[-1]
         # extension x {}
-        if (node.get("A_name") == ex_node.get("A_name")) and (node.get("B_kind") == "extension"):
+        if (name == ex_node.get("A_name")) and (node.get("B_kind") == "extension"):
             repeat_extension(in_node, node.get("A_name"))
             repeat_match_member(in_node, ex_node)
 
@@ -94,6 +98,7 @@ def match_ast_name(data, external_ast_dir):
         candidate_files = []
         # extension -> 이름이 같은지
         name = node.get("A_name")
+        name = name.split(".")[-1]
         if name in EXTERNAL_NAME_TO_FILE.keys() and node.get("B_kind") == "extension":
             candidate_files.extend(EXTERNAL_NAME_TO_FILE[name])
          
