@@ -56,7 +56,6 @@ def repeat_extension(in_node, name):
     node = in_node.get("node")
     if not node:
         node = in_node
-    
     c_name = node.get("A_name")
     c_name = c_name.split(".")[-1]
     if c_name == name:
@@ -64,6 +63,19 @@ def repeat_extension(in_node, name):
         extensions = in_node.get("extension", [])
         for extension in extensions:
             repeat_extension(extension, name)
+
+# enum case 제외
+def repeat_extension_enum(in_node):
+    node = in_node.get("node")
+    if not node:
+        node = in_node
+    members = node.get("G_members", [])
+    for member in members:
+        if member.get("B_kind") == "case":
+            in_matched_list(member)
+    extensions = in_node.get("extension", [])
+    for extension in extensions:
+        repeat_extension_enum(extension)
 
 # SDK 요소 식별
 def match_sdk_name(data):
@@ -97,21 +109,21 @@ def match_sdk_name(data):
         for ad in adopted:
             if ad in SDK_SIGNATURE:
                 if node.get("B_kind") == "enum":
-                    if ad in ["String", "Int", "UInt", "Double", "Float", "Character", "CaseIterable"]:
-                        repeat_extension(data, name)
+                    if ad in ["String", "Int", "UInt", "Double", "Float", "Character", "CaseIterable", "Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
+                        repeat_extension_enum(data)
+                elif ad in ["Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
+                    add_var_member(node)
+                    for extension in extensions:
+                        add_var_member(extension)
+                    for child in children:
+                        add_var_member(child)
+                
                 sdk_list = SDK_SIGNATURE[ad]
                 if isinstance(sdk_list, list):
                     for sdk in sdk_list:
                         repeat_match_member(data, sdk)
                 else:
                     repeat_match_member(data, sdk_list)
-                if ad in ["Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
-                    repeat_extension(data, name)
-                    add_var_member(node)
-                    for extension in extensions:
-                        add_var_member(extension)
-                    for child in children:
-                        add_var_member(child)
 
 # SDK 노드 정보 추출 및 결과 저장
 def match_and_save(candidate_path, sdk_file_path):
