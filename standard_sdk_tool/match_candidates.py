@@ -106,12 +106,18 @@ def match_sdk_name(data):
             repeat_extension(data, name)
         
         adopted = node.get("E_adoptedClassProtocols", [])
+        if "Codable" in adopted:
+            if "Decodable" not in adopted:
+                adopted.append("Decodable")
+            if "Encodable" not in adopted:
+                adopted.append("Encodable")
+            
         for ad in adopted:
             if ad in SDK_SIGNATURE:
                 if node.get("B_kind") == "enum":
                     if ad in ["String", "Int", "UInt", "Double", "Float", "Character", "CaseIterable", "Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
                         repeat_extension_enum(data)
-                elif ad in ["Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"]:
+                elif ad in ["Decodable", "Encodable", "NSCoding", "NSSecureCoding"]:
                     add_var_member(node)
                     for extension in extensions:
                         add_var_member(extension)
