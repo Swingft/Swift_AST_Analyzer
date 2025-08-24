@@ -31,14 +31,11 @@ def match_member(node, ex_node):
 
 # 자식 노드가 자식 노드를 가지는 경우
 def repeat_match_member(in_node, ex_node):
-    node = in_node.get("node")
-    if node:
-        extensions = in_node.get("extension", [])
-        children = in_node.get("children", [])
-    else:
-        node = in_node
-        extensions = []
-        children = []
+    if in_node is None: 
+        return
+    node = in_node.get("node", in_node)
+    extensions = in_node.get("extension", [])
+    children = in_node.get("children", [])
     
     match_member(node, ex_node)
 
@@ -144,17 +141,13 @@ def match_and_save(candidate_path, external_ast_path):
 
         match_ast_name(candidates, external_ast_path)
 
-        matched_output_path = "../output/external_list.json"
+        matched_output_path = "./output/external_list.json"
         with open(matched_output_path, "w", encoding="utf-8") as f:
             json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
     
 
-def main():
-    candidate_path = "../output/external_candidates.json"
-    external_ast_path = "../output/external_to_ast/"
+def match_candidates_external():
+    candidate_path = "./output/external_candidates.json"
+    external_ast_path = "./output/external_to_ast/"
 
     match_and_save(candidate_path, external_ast_path)
-
-
-if __name__ == "__main__":
-    main()

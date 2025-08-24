@@ -45,6 +45,8 @@ struct ExtensionInfoExtractor {
                 memberList.append(FunctionInfoExtractor.extract(from: funcDecl, locationHandler: locationHandler))
             } else if let varDecl = member.decl.as(VariableDeclSyntax.self) {
                 memberList.append(contentsOf: VariableInfoExtractor.extract(from: varDecl, locationHandler: locationHandler))
+            } else if let enumDecl = member.decl.as(EnumDeclSyntax.self) {
+                memberList.append(EnumInfoExtractor.extract(from: enumDecl, locationHandler: locationHandler))
             }
         }
         

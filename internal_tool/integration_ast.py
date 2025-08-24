@@ -9,9 +9,9 @@ ALIAS_INFO = {}
 
 # swift 파일 단위의 ast.json을 읽고, 노드 저장
 def load_ast_files():
-    dir_path = "../output/source_json/"
-    ui_dir_path = "../output/ui_source_json/"
-    alias_dir_path = "../output/typealias_json/typealias.json"
+    dir_path = "./output/source_json/"
+    ui_dir_path = "./output/ui_source_json/"
+    alias_dir_path = "./output/typealias_json/typealias.json"
 
     nodes = []
     for file in os.listdir(dir_path):
@@ -94,12 +94,18 @@ def check_inheritance(nodes):
 # 부모 노드 연결
 def link_parent_node():
     for parent in list(INHERITANCE.keys()):
-        node = AST_NODE.get(parent)        
-        if node:
-            INHERITANCE[parent]["parent_node"] = node
-            if parent in NO_INHERITANCE:   
-                 del NO_INHERITANCE[parent]
-            link_adopted_info_from_extension(parent)
+        nodes = AST_NODE.get(parent)  
+        if nodes:
+            if not isinstance(nodes, list):
+                nodes = [nodes] 
+            for node in nodes:
+                if node.get("B_kind") == "extension":   
+                    continue
+                INHERITANCE[parent]["parent_node"] = node
+                for name, node_value in list(NO_INHERITANCE.items()):
+                    if node_value == node:
+                        del NO_INHERITANCE[name]
+                break
 
 # 확장에서 추가한 프로토콜 연결  
 def link_adopted_info_from_extension(parent_node):
@@ -151,9 +157,15 @@ def check_inheritance_ui(ui_nodes):
                 INHERITANCE[name]["extension"].append(node)
     
     for parent in INHERITANCE.keys():
-        node = UI_AST_NODE.get(parent)
-        if node:
-            INHERITANCE[parent]["parent_node"] = node
+        nodes = UI_AST_NODE.get(parent)  
+        if nodes:
+            if not isinstance(nodes, list):
+                nodes = [nodes] 
+            for node in nodes:
+                if node.get("B_kind") == "extension":   
+                    continue
+                INHERITANCE[parent]["parent_node"] = node
+                break
 
 # ast 트리 구조 생성
 def make_inheritance_tree():
@@ -201,13 +213,15 @@ def make_inheritance_tree():
             root.append(root_tree)
     return root
 
-def main():
-    output_path = "../output/inheritance_node.json"
-    no_output_path = "../output/no_inheritance_node.json"
+def integration_ast():
+    output_path = "./output/inheritance_node.json"
+    no_output_path = "./output/no_inheritance_node.json"
 
     nodes, ui_nodes = load_ast_files()
     check_inheritance(nodes)
     check_inheritance_ui(ui_nodes)
+    for parent in list(INHERITANCE.keys()):
+        link_adopted_info_from_extension(parent)
     root = make_inheritance_tree()
 
     with open(output_path, "w", encoding="utf-8") as f:
@@ -215,5 +229,3 @@ def main():
     with open(no_output_path, "w", encoding="utf-8") as f:
         json.dump(NO_INHERITANCE, f, indent=2, ensure_ascii=False)
     
-if __name__ == "__main__":
-    main()

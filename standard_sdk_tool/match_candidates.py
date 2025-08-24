@@ -9,6 +9,19 @@ def in_matched_list(node):
     if node not in MATCHED_LIST:
         MATCHED_LIST.append(node)
 
+# enum case 제외
+def repeat_extension_enum(in_node):
+    node = in_node.get("node")
+    if not node:
+        node = in_node
+    members = node.get("G_members", [])
+    for member in members:
+        if member.get("B_kind") == "case":
+            in_matched_list(member)
+    extensions = in_node.get("extension", [])
+    for extension in extensions:
+        repeat_extension_enum(extension)
+
 # "Decodable", "Encodable", "Codable", "NSCoding", "NSSecureCoding"의 멤버변수 제외
 def add_var_member(node):
     members = node.get("G_members", [])
@@ -19,7 +32,16 @@ def add_var_member(node):
 def match_member(node, sdk_node):
     members = node.get("G_members", [])
     sdk_members = sdk_node.get("members", {})
+
     for member in members:
+        name = member.get("A_name")
+        name = name.split(".")[-1]
+        kind = member.get("B_kind")
+        
+        if kind in ["struct", "protocol", "class"]:
+            match_sdk_name(member)
+            continue
+ 
         name = member.get("A_name")
         name = name.split(".")[-1]
         if name in sdk_members:
@@ -31,19 +53,19 @@ def match_member(node, sdk_node):
                 sdk_kind = "case"
             elif sdk_kind == "func":
                 sdk_kind = "function"
-            if member.get("B_kind") == sdk_kind:  
+
+            if kind == sdk_kind:  
                 in_matched_list(member)
+                if kind == "function":
+                    match_member(member, sdk_member)
 
 # 자식 노드가 자식 노드를 가지는 경우
 def repeat_match_member(in_node, sdk_sig):
-    node = in_node.get("node")
-    if node:
-        extensions = in_node.get("extension", [])
-        children = in_node.get("children", [])
-    else:
-        node = in_node
-        extensions = []
-        children = []
+    if in_node is None: 
+        return
+    node = in_node.get("node", in_node)
+    extensions = in_node.get("extension", [])
+    children = in_node.get("children", [])
 
     match_member(node, sdk_sig)
     for extension in extensions:
@@ -63,19 +85,6 @@ def repeat_extension(in_node, name):
         extensions = in_node.get("extension", [])
         for extension in extensions:
             repeat_extension(extension, name)
-
-# enum case 제외
-def repeat_extension_enum(in_node):
-    node = in_node.get("node")
-    if not node:
-        node = in_node
-    members = node.get("G_members", [])
-    for member in members:
-        if member.get("B_kind") == "case":
-            in_matched_list(member)
-    extensions = in_node.get("extension", [])
-    for extension in extensions:
-        repeat_extension_enum(extension)
 
 # SDK 요소 식별
 def match_sdk_name(data):
@@ -150,16 +159,13 @@ def match_and_save(candidate_path, sdk_file_path):
                 print(e)
 
         match_sdk_name(candidates)
-        matched_output_path = "../output/standard_list.json"
+        matched_output_path = "./output/standard_list.json"
         with open(matched_output_path, "w", encoding="utf-8") as f:
             json.dump(MATCHED_LIST, f, indent=2, ensure_ascii=False)
 
 
-def main():
-    candidate_path = "../output/external_candidates.json"
-    sdk_file_path = "../output/sdk-json/"
+def match_candidates_sdk():
+    candidate_path = "./output/external_candidates.json"
+    sdk_file_path = "./output/sdk-json/"
 
     match_and_save(candidate_path, sdk_file_path)
-
-if __name__ == "__main__":
-    main()

@@ -2,6 +2,9 @@ import subprocess
 import os
 import json
 
+M_SAME_NAME = []
+P_SAME_NAME = []
+
 def run_command(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
     return result.stdout.strip()
@@ -9,13 +12,14 @@ def run_command(cmd):
 # import_list.txt 읽고 중복 제거
 def read_import_list():
     import_list = set()
-    path = "../output/import_list.txt"
+    path = "./output/import_list.txt"
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 import_list.add(line.strip())
     import_list.add("Swift")
     import_list.add("Foundation")
+
     with open(path, "w", encoding="utf-8") as f:
         for i in import_list:
             f.write(f"{i}\n")
@@ -32,7 +36,7 @@ def find_path():
 
 # sdk api - json 추출
 def dump_to_json(digester_path, sdk_path, import_list):
-    output_dir = "../output/sdk-json/"
+    output_dir = "./output/sdk-json/"
 
     for name in import_list:
         output_path = os.path.join(output_dir, f"{name}-sdk.json")
@@ -72,6 +76,9 @@ def get_members(children):
                              "Enum", "EnumElement", "TypeAlias", "AssociatedType"}:
             continue
 
+        if decl_kind in ["Func", "Var", "EnumElement"]:
+            M_SAME_NAME.append(name)
+
         member_info = {
             "kind": decl_kind,
             "type": child.get("printedName"),
@@ -80,6 +87,28 @@ def get_members(children):
 
         members[name] = member_info
     return members
+
+def parse_type(child, sdk_info):
+    kind = child.get("kind")
+    decl_kind = child.get("declKind", kind) 
+
+    if kind != "TypeDecl":
+        return
+    
+    if decl_kind in ["Class", "Struct", "Protocol", "Enum"]:
+        P_SAME_NAME.append(child.get("name"))
+
+    name = child.get("name")
+    info = {
+        "kind": decl_kind,
+        "module": child.get("moduleName"),
+        "usr": child.get("usr"),
+        "members": get_members(child.get("children", []))
+    }
+    sdk_info[name] = info
+
+    for c in child.get("children", []):
+        parse_type(c, sdk_info)
 
 # sdk api의 타입 및 멤버 정보 추출
 def sdk_dump_parser(path):
@@ -92,33 +121,49 @@ def sdk_dump_parser(path):
     children = abi_root.get("children", [])
 
     for child in children:
-        kind = child.get("kind")
-        decl_kind = child.get("declKind", kind)
-        
-        if kind != "TypeDecl":
-            continue
-
-        name = child.get("name")
-        info = {
-            "kind": decl_kind,
-            "module": child.get("moduleName"),
-            "usr": child.get("usr"),
-            "members": get_members(child.get("children", []))
-        }
-        sdk_info[name] = info
+        parse_type(child, sdk_info)
     
     return sdk_info
 
+# 재 export 모듈 파악
+def import_info_parser(path):
+    re_import_list = set()
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-def main():
+    abi_root = data.get("ABIRoot", {})
+    children = abi_root.get("children", [])
+    root_name = abi_root.get("name")
+    for child in children:
+        if child.get("kind") == "Import":
+            name = child.get("name")
+            if name.startswith(f"{root_name}."):
+                continue
+            decl_attr = child.get("declAttributes", [])
+            if "Exported" in decl_attr:
+                re_import_list.add(name)
+
+    return re_import_list
+    
+
+def find_standard_sdk():
     digester_path, sdk_path = find_path()
     import_list = read_import_list()
 
-    output_dir = "../output/sdk-json/"
+    output_dir = "./output/sdk-json/"
     dump_to_json(digester_path, sdk_path, import_list)
     
+    re_import_list = set()
     for fileName in os.listdir(output_dir):
         file_path = os.path.join(output_dir, fileName)
+        re_import_list.update(import_info_parser(file_path))
+
+    re_import_list = list(set(re_import_list) - set(import_list))
+    dump_to_json(digester_path, sdk_path, re_import_list)
+
+    for fileName in os.listdir(output_dir):
+        file_path = os.path.join(output_dir, fileName)
+        
         sdk_info = sdk_dump_parser(file_path)
 
         if not sdk_info:
@@ -126,6 +171,5 @@ def main():
         else:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(sdk_info, f, indent=2, ensure_ascii=False)
-
-if __name__ == "__main__":
-    main()
+    
+    return M_SAME_NAME, P_SAME_NAME

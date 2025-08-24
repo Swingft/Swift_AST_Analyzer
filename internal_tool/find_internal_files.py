@@ -1,14 +1,6 @@
 import os
-import subprocess
-import sys
 
-EXCLUDE_KEYWORDS = [".build", "Pods", "vendor", "thirdparty", "external"]
-
-def run_command(cmd):
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    print(result.stdout)
-    print(result.stderr)
-
+EXCLUDE_KEYWORDS = [".build", "Pods", "vendor", "thirdparty", "external", "frameworks"]
 
 def find_swift_files(directory):
     swift_files = set()
@@ -21,19 +13,12 @@ def find_swift_files(directory):
             if file.endswith(".swift"):
                 swift_files.add(os.path.join(root, file))
 
-    output_path ="../output/swift_file_list.txt"
+    output_path ="./output/swift_file_list.txt"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         for swift_file in swift_files:
             f.write(f"{swift_file}\n")
 
 
-def main():
-    if len(sys.argv) != 2:
-        sys.exit(1)
-
-    code_project_dir = sys.argv[1]
+def find_internal_files(code_project_dir):
     find_swift_files(code_project_dir)
-
-if __name__ == "__main__":
-    main()

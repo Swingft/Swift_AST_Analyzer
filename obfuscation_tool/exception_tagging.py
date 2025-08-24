@@ -20,11 +20,11 @@ def repeat_match_member(data):
             repeat_member(member)
             add_tagging(member)
     def repeat(item):
-        node = item.get("node")
-        if not node:
-            node = item
+        if item is None: 
+            return
+        node = item.get("node", item)
         extensions = item.get("extension", [])
-        children = item.get("children", []) 
+        children = item.get("children", [])
 
         add_tagging(node)
         repeat_member(node)
@@ -41,11 +41,11 @@ def repeat_match_member(data):
 
 # 외부 라이브러리 / 표준 SDK 노드 없이 트리 구성
 def re_make_tree(data):
-    node = data.get("node")
-    if not node:
-        node = data
+    if data is None: 
+        return
+    node = data.get("node", data)
     extensions = data.get("extension", [])
-    children = data.get("children", []) 
+    children = data.get("children", [])
 
     if node.get("B_kind") is None:
         for extension in extensions:
@@ -73,11 +73,11 @@ def find_node(data):
         for _, node in data.items():
             re_make_tree(node)
             
-def main():
-    input_file_1 = "../output/inheritance_node.json"
-    input_file_2 = "../output/no_inheritance_node.json"
-    exception_file = "../output/exception_list.json"
-    output_file = "../output/ast_node.json"
+def exception_tagging():
+    input_file_1 = "./output/inheritance_node.json"
+    input_file_2 = "./output/no_inheritance_node.json"
+    exception_file = "./output/exception_list.json"
+    output_file = "./output/ast_node.json"
 
     if os.path.exists(input_file_1):
         with open(input_file_1, "r", encoding="utf-8") as f:
@@ -100,8 +100,3 @@ def main():
 
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(NODE, f, indent=2, ensure_ascii=False)
-
-    
-
-if __name__ == "__main__":
-    main()

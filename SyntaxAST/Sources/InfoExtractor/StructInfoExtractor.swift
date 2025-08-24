@@ -45,6 +45,12 @@ struct StructInfoExtractor {
                 memberList.append(FunctionInfoExtractor.extract(from: funcDecl, locationHandler: locationHandler))
             } else if let varDecl = member.decl.as(VariableDeclSyntax.self) {
                 memberList.append(contentsOf: VariableInfoExtractor.extract(from: varDecl, locationHandler: locationHandler))
+            } else if let enumDecl = member.decl.as(EnumDeclSyntax.self) {
+                memberList.append(EnumInfoExtractor.extract(from: enumDecl, locationHandler: locationHandler))
+            } else if let structDecl = member.decl.as(StructDeclSyntax.self) {
+                memberList.append(StructInfoExtractor.extract(from: structDecl, locationHandler: locationHandler))
+            } else if let classDecl = member.decl.as(ClassDeclSyntax.self) {
+                memberList.append(ClassInfoExtractor.extract(from: classDecl, locationHandler: locationHandler))
             }
         }
         

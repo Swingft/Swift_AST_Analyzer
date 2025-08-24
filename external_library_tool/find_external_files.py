@@ -38,7 +38,6 @@ def find_external_library(project_root):
    
     # .swift 파일 수집 및 저장
     for dir_path in dir_paths:
-        print(dir_path)
         for path, _, files in os.walk(dir_path):
             for file in files:
                 if file.endswith(".swift"):
@@ -57,22 +56,16 @@ def find_external_framework(project_root):
     for dir_path in dir_paths:
         for dirpath, _, filenames in os.walk(dir_path):
             for filename in filenames:
-                if filename.endswith(".swiftinterface"):
+                if filename.endswith(".swiftinterface") or filename.endswith(".swift"):
                     path = os.path.join(dirpath, filename)
                     SWIFT_FILES.append(path)
 
-def main():
-    if len(sys.argv) != 2:
-        exit(1)
-
-    project_dir = sys.argv[1]
+def find_external_files(project_dir):
+    
     find_external_library(project_dir)
     find_external_framework(project_dir)
     
-    output_dir = "../output/external_file_list.txt"
+    output_dir = "./output/external_file_list.txt"
     with open(output_dir, "w", encoding="utf-8") as f:
         for swift_file in SWIFT_FILES:
             f.write(f"{swift_file}\n")
-
-if __name__ == "__main__":
-    main()

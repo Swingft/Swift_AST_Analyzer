@@ -2,6 +2,18 @@ import subprocess
 import os
 import sys
 
+from internal_tool.find_internal_files import find_internal_files
+from internal_tool.integration_ast import integration_ast
+from internal_tool.find_exception_target import find_exception_target
+from external_library_tool.find_external_files import find_external_files
+from external_library_tool.find_external_candidates import find_external_candidates
+from external_library_tool.match_candidates import match_candidates_external
+from standard_sdk_tool.find_standard_sdk import find_standard_sdk
+from standard_sdk_tool.match_candidates import match_candidates_sdk
+from obfuscation_tool.find_ui_external_name import find_ui_external_name
+from obfuscation_tool.merge_exception_list import merge_exception_list
+from obfuscation_tool.exception_tagging import exception_tagging
+
 def run_command(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -21,59 +33,37 @@ def main():
     os.makedirs("./output/external_to_ast/", exist_ok=True)
     os.makedirs("./output/sdk-json/", exist_ok=True)
 
-    # 소스코드 파일 위치 수집
-    internal_dir = os.path.join(original_dir, "internal_tool/")
-    os.chdir(internal_dir)
-    cmd = ["python3", "find_internal_files.py", code_project_dir]
-    run_command(cmd)
+    # 소스코드 & 외부 라이브러리 파일 위치 수집 
+    find_internal_files(code_project_dir)
+    find_external_files(code_project_dir)
 
-    # 외부라이브러리 파일 위치 수집
-    external_dir = os.path.join(original_dir, "external_library_tool/")
-    os.chdir(external_dir)
-    cmd = ["python3", "find_external_files.py", code_project_dir]
-    run_command(cmd)
- 
-    # 소스코드, 외부 라이브러리 AST 파싱
+    # 소스코드, 외부 라이브러리 AST 파싱 & 소스코드 AST 선언부 통합
     os.chdir(original_dir)
     cmd = ["python3", "run_swift_syntax.py"]
     run_command(cmd)
-    
-    # 소스코드 AST 선언부 통합
-    os.chdir(internal_dir)
-    cmd = ["python3", "integration_ast.py"]
-    run_command(cmd)
+    integration_ast()
 
-    # 내부 제외 대상 식별
-    os.chdir(internal_dir)
-    cmd = ["python3", "find_exception_target.py"]
-    run_command(cmd)
+    # 외부 라이브러리 / 표준 SDK 후보 추출 & 외부 라이브러리 요소 식별
+    find_external_candidates()
+    match_candidates_external()
 
-    # 외부 라이브러리 / 표준 SDK 후보 추출
-    # 외부 라이브러리 요소 식별
-    external_dir = os.path.join(original_dir, "external_library_tool/")
-    os.chdir(external_dir)
-    cmd = ["python3", "find_external_candidates.py"]
-    run_command(cmd)
-    cmd = ["python3", "match_candidates.py"]
-    run_command(cmd)
-
+    m_same_name = []
+    p_same_name = []
     # 표준 SDK 정보 추출 & 표준 SDK 요소 식별
     path = os.path.join(original_dir, "output/import_list.txt")
     if os.path.exists(path):
-        standard_dir = os.path.join(original_dir, "standard_sdk_tool/")
-        os.chdir(standard_dir)
-        cmd = ["python3", "find_standard_sdk.py"]
-        run_command(cmd)
-        cmd = ["python3", "match_candidates.py"]
-        run_command(cmd)
+        m_same_name, p_same_name = find_standard_sdk()
+        match_candidates_sdk()
+    
+    # 내부 제외 대상 식별
+    s_n, p_n = find_ui_external_name()
+    m_same_name.extend(s_n)
+    p_same_name.extend(p_n)
+    find_exception_target(m_same_name, p_same_name)
 
     # 제외 대상 리스트 병합
-    obf_dir = os.path.join(original_dir, "obfuscation_tool/")
-    os.chdir(obf_dir)
-    cmd = ["python3", "merge_exception_list.py"]
-    run_command(cmd)
-    cmd = ["python3", "exception_tagging.py"]
-    run_command(cmd)
+    merge_exception_list()
+    exception_tagging()
 
     # 사용 완료한 파일 삭제
     file_path = os.path.join(original_dir, "output/import_list.txt")
